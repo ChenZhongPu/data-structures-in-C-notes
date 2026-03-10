@@ -22,9 +22,11 @@ void list_destroy(List lst);
 
 void list_clear(List lst); // keep the header node, remove all other nodes
 
-void display_list(const List lst);
+void list_display(const List lst);
 
 void list_add_first(List lst, ElemType e);
+
+void list_add_last(List lst, ElemType e);
 
 void list_from_array_first(List lst, const ElemType arr[], size_t n);
 

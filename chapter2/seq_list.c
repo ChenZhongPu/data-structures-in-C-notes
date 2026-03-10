@@ -67,3 +67,16 @@ bool list_delete(List L, size_t i) {
   --L->length;
   return true;
 }
+
+void list_delete_elem(List L, ElemType e) {
+  if (L == NULL) {
+    return;
+  }
+  int k = 0;
+  for (size_t i = 0; i < L->length; ++i) {
+    if (L->data[i] != e) {
+      L->data[k++] = L->data[i];
+    }
+  }
+  L->length = k;
+}

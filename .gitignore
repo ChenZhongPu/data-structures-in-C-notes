@@ -83,3 +83,8 @@ Makefile.in
 # OS files
 .DS_Store
 Thumbs.db
+
+# Local chapter executables (no extension)
+chapter*/main_*
+!chapter*/main_*.c
+!chapter*/main_*.h

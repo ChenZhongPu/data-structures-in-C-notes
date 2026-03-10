@@ -33,6 +33,25 @@ int main(void) {
   printf("after delete: ");
   list_display(L);
 
+  print_bool("insert 20 at 1", list_insert(L, 1, 20));
+  print_bool("insert 30 at 2", list_insert(L, 2, 30));
+  print_bool("insert 20 at 3", list_insert(L, 3, 20));
+
+  printf("before delete elem 20: ");
+  list_display(L);
+  list_delete_elem(L, 20);
+  printf("after delete elem 20: ");
+  list_display(L);
+
+  list_delete_elem(L, 99);
+  printf("after delete elem 99: ");
+  list_display(L);
+
+  list_delete_elem(L, 10);
+  list_delete_elem(L, 30);
+  printf("after delete elem 10 and 30: ");
+  list_display(L);
+
   printf("length at end: %zu\n", list_length(L));
   print_bool("empty at end", list_is_empty(L));
 

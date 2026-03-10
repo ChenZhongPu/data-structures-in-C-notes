@@ -33,7 +33,7 @@ void list_clear(List lst) {
   lst->next = NULL; // reset the header node's next pointer
 }
 
-void display_list(const List lst) {
+void list_display(const List lst) {
   Link current = lst->next; // skip the header node
   while (current != NULL) {
     printf("%d ", current->data);
@@ -47,6 +47,18 @@ void list_add_first(List lst, ElemType e) {
   new_node->data = e;
   new_node->next = lst->next;
   lst->next = new_node;
+}
+
+void list_add_last(List lst, ElemType e) {
+  Link new_node = (Link)malloc(sizeof(struct Node));
+  new_node->data = e;
+  new_node->next = NULL;
+
+  Link current = lst; // start from the header node
+  while (current->next != NULL) {
+    current = current->next;
+  }
+  current->next = new_node;
 }
 
 void list_from_array_first(List lst, const ElemType arr[], size_t n) {

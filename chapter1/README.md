@@ -36,7 +36,7 @@ typedef struct StudNode
 } StudType;
 ```
 
-1.1.5提到“自动变量（automatic variable）”的概念，作为对*duration*（）补充，读者需要知道：
+1.1.5提到“自动变量（automatic variable）”的概念，作为对*duration*补充，读者需要知道：
 
 - Automatic: exists only within blocks
 - Static: exist for the entire duration of the program
@@ -130,4 +130,4 @@ int main() {
 - P类问题：可以在多项式时间内求解的问题。例如排序、最短路径等。
 - NP类问题：可以在多项式时间内验证答案的问题。例如给定一个解，能快速验证它是否正确。
 
-换言之，$P \subset NP$。参考[P versus NP Problem](https://en.wikipedia.org/wiki/P_versus_NP_problem)。
+换言之，\[P \subset NP\]。参考[P versus NP Problem](https://en.wikipedia.org/wiki/P_versus_NP_problem)。

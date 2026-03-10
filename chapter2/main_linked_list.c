@@ -33,6 +33,10 @@ int main(void) {
   assert(list_length(list) == 1);
   assert(list_get(list, 0, &value) == LIST_OK && value == 99);
 
+  list_add_last(list, 88);
+  assert(list_length(list) == 2);
+  assert(list_get(list, 1, &value) == LIST_OK && value == 88);
+
   printf("All linked list tests passed.\n");
   list_destroy(list);
 

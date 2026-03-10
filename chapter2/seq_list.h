@@ -25,3 +25,5 @@ int list_locate(const List L, ElemType e);
 bool list_insert(List L, size_t i, ElemType e);
 
 bool list_delete(List L, size_t i);
+
+void list_delete_elem(List L, ElemType e);

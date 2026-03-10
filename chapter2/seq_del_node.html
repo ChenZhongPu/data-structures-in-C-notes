@@ -1,0 +1,812 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sequential List Delete Element Visualization</title>
+  <style>
+    :root {
+      --bg: #f4efe6;
+      --panel: rgba(255, 250, 242, 0.88);
+      --panel-strong: #fff8ee;
+      --ink: #1f1d1a;
+      --muted: #655d52;
+      --accent: #bd5d38;
+      --accent-deep: #8f3f22;
+      --keep: #2f7d4a;
+      --drop: #b23a2b;
+      --scan: #2463a6;
+      --line: rgba(31, 29, 26, 0.12);
+      --shadow: 0 18px 48px rgba(98, 74, 40, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Noto Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(189, 93, 56, 0.16), transparent 28%),
+        radial-gradient(circle at bottom right, rgba(36, 99, 166, 0.12), transparent 32%),
+        linear-gradient(180deg, #f7f2ea 0%, #efe7da 100%);
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 32px auto 48px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 24px;
+      padding: 28px;
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      background: linear-gradient(135deg, rgba(255, 248, 238, 0.94), rgba(250, 241, 228, 0.92));
+      box-shadow: var(--shadow);
+    }
+
+    .eyebrow {
+      margin: 0;
+      font-size: 0.8rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 4vw, 3.6rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+      max-width: 12ch;
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 70ch;
+      font-size: 1rem;
+      line-height: 1.65;
+      color: var(--muted);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.35fr 0.95fr;
+      gap: 20px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .card-inner {
+      padding: 22px;
+    }
+
+    .section-title {
+      margin: 0 0 14px;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+    }
+
+    .control-row,
+    .sample-row,
+    .stats-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .sample-row {
+      margin-bottom: 16px;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 999px;
+      padding: 10px 16px;
+      font: inherit;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), var(--accent-deep));
+      box-shadow: 0 10px 18px rgba(143, 63, 34, 0.18);
+      transition: transform 140ms ease, filter 140ms ease;
+    }
+
+    button.secondary {
+      color: var(--ink);
+      background: linear-gradient(135deg, #efe4d4, #e0d0bd);
+      box-shadow: none;
+    }
+
+    button.ghost {
+      color: var(--ink);
+      background: transparent;
+      border: 1px solid var(--line);
+      box-shadow: none;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.02);
+    }
+
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      filter: none;
+    }
+
+    .sample-btn.active {
+      outline: 2px solid rgba(36, 99, 166, 0.28);
+      outline-offset: 2px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .swatch {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      display: inline-block;
+    }
+
+    .swatch.scan { background: var(--scan); }
+    .swatch.keep { background: var(--keep); }
+    .swatch.drop { background: var(--drop); }
+
+    .array-wrap {
+      overflow-x: auto;
+      padding-bottom: 6px;
+      margin-top: 18px;
+    }
+
+    .trace-wrap {
+      margin-top: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .trace-title {
+      margin: 0;
+      padding: 14px 16px;
+      font-size: 0.9rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      background: rgba(255, 248, 238, 0.9);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .trace-scroll {
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .trace-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.94rem;
+    }
+
+    .trace-table th,
+    .trace-table td {
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .trace-table th {
+      position: sticky;
+      top: 0;
+      background: #f8f1e6;
+      color: var(--muted);
+      font-size: 0.8rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .trace-table tr.active-row td {
+      background: rgba(36, 99, 166, 0.08);
+      font-weight: 600;
+    }
+
+    .array-grid {
+      display: grid;
+      grid-auto-flow: column;
+      grid-auto-columns: minmax(80px, 1fr);
+      gap: 12px;
+      align-items: end;
+      min-height: 164px;
+    }
+
+    .cell {
+      position: relative;
+      min-height: 138px;
+      border-radius: 20px;
+      padding: 12px 10px 14px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.65);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform 220ms ease, background 220ms ease, border-color 220ms ease;
+    }
+
+    .cell.active-i {
+      transform: translateY(-8px);
+      border-color: rgba(36, 99, 166, 0.45);
+      background: rgba(36, 99, 166, 0.08);
+    }
+
+    .cell.active-k {
+      border-color: rgba(47, 125, 74, 0.45);
+      box-shadow: inset 0 0 0 2px rgba(47, 125, 74, 0.16);
+    }
+
+    .cell.kept {
+      background: rgba(47, 125, 74, 0.12);
+    }
+
+    .cell.removed {
+      background: rgba(178, 58, 43, 0.12);
+      color: #6d231a;
+    }
+
+    .cell.inactive {
+      opacity: 0.38;
+      filter: saturate(0.7);
+    }
+
+    .marker-row {
+      display: flex;
+      justify-content: space-between;
+      min-height: 22px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .marker {
+      opacity: 0;
+      transition: opacity 180ms ease;
+    }
+
+    .marker.visible {
+      opacity: 1;
+    }
+
+    .marker.i { color: var(--scan); }
+    .marker.k { color: var(--keep); }
+
+    .value {
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      letter-spacing: -0.05em;
+    }
+
+    .meta {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .status-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.66);
+      border: 1px solid var(--line);
+    }
+
+    .status-tag strong {
+      color: var(--ink);
+    }
+
+    .status-tag.keep strong { color: var(--keep); }
+    .status-tag.drop strong { color: var(--drop); }
+    .status-tag.scan strong { color: var(--scan); }
+
+    .stats-row {
+      margin-top: 18px;
+    }
+
+    .stat {
+      min-width: 120px;
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+    }
+
+    .stat-label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      display: block;
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.05em;
+    }
+
+    .explain {
+      margin-top: 18px;
+      padding: 18px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.75), rgba(245, 236, 223, 0.86));
+      border: 1px solid var(--line);
+      color: var(--muted);
+      line-height: 1.7;
+      min-height: 120px;
+    }
+
+    .code {
+      margin: 0;
+      padding: 18px 20px;
+      overflow-x: auto;
+      font-family: "SFMono-Regular", "Consolas", "Liberation Mono", monospace;
+      font-size: 0.95rem;
+      line-height: 1.7;
+      background: #201b17;
+      color: #f3e6d2;
+    }
+
+    .code-line {
+      display: block;
+      padding: 0 10px;
+      margin: 0 -10px;
+      border-radius: 10px;
+      transition: background 180ms ease;
+    }
+
+    .code-line.active {
+      background: rgba(189, 93, 56, 0.24);
+    }
+
+    .note-list {
+      margin: 0;
+      padding: 18px 22px 22px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .note-list li + li {
+      margin-top: 10px;
+    }
+
+    @media (max-width: 920px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      h1 {
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Array-Based List / Delete By Value</p>
+      <h1>Visualizing the two-pointer overwrite algorithm</h1>
+      <p>
+        The function <code>list_delete_elem(List L, ElemType e)</code> removes every occurrence of
+        <code>e</code> in one scan. The key idea is simple: <strong><code>i</code></strong> reads the original array,
+        while <strong><code>k</code></strong> writes back only the elements that should stay.
+      </p>
+    </section>
+
+    <section class="layout">
+      <div class="card">
+        <div class="card-inner">
+          <h2 class="section-title">Interactive Walkthrough</h2>
+
+          <div class="sample-row" id="sampleRow"></div>
+
+          <div class="control-row">
+            <button id="stepBtn">Next step</button>
+            <button id="playBtn" class="secondary">Auto play</button>
+            <button id="resetBtn" class="ghost">Reset</button>
+          </div>
+
+          <div class="legend">
+            <span><i class="swatch scan"></i> read pointer <code>i</code></span>
+            <span><i class="swatch keep"></i> write pointer <code>k</code> / kept value</span>
+            <span><i class="swatch drop"></i> removed value</span>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat">
+              <span class="stat-label">Delete Value</span>
+              <span class="stat-value" id="targetValue">20</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Original Length</span>
+              <span class="stat-value" id="originalLength">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Current i</span>
+              <span class="stat-value" id="pointerI">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">Current k</span>
+              <span class="stat-value" id="pointerK">0</span>
+            </div>
+            <div class="stat">
+              <span class="stat-label">New Length</span>
+              <span class="stat-value" id="newLength">0</span>
+            </div>
+          </div>
+
+          <div class="array-wrap">
+            <div class="array-grid" id="arrayGrid"></div>
+          </div>
+
+          <div class="trace-wrap">
+            <h3 class="trace-title">Pointer Trace</h3>
+            <div class="trace-scroll">
+              <table class="trace-table">
+                <thead>
+                  <tr>
+                    <th>i</th>
+                    <th>k</th>
+                  </tr>
+                </thead>
+                <tbody id="traceBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="explain" id="explainBox"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="section-title" style="padding: 22px 22px 0; margin-bottom: 0;">Algorithm</h2>
+        <pre class="code" id="codeBlock"><code><span class="code-line" data-line="1">void list_delete_elem(List L, ElemType e) {</span>
+<span class="code-line" data-line="2">  if (L == NULL) return;</span>
+<span class="code-line" data-line="3">  int k = 0;</span>
+<span class="code-line" data-line="4">  for (size_t i = 0; i &lt; L-&gt;length; ++i) {</span>
+<span class="code-line" data-line="5">    if (L-&gt;data[i] != e) {</span>
+<span class="code-line" data-line="6">      L-&gt;data[k++] = L-&gt;data[i];</span>
+<span class="code-line" data-line="7">    }</span>
+<span class="code-line" data-line="8">  }</span>
+<span class="code-line" data-line="9">  L-&gt;length = k;</span>
+<span class="code-line" data-line="10">}</span></code></pre>
+
+        <ul class="note-list">
+          <li><strong>Why it works:</strong> every kept element is copied to the earliest available slot, so there are never gaps among valid elements.</li>
+          <li><strong>Time complexity:</strong> <code>O(n)</code>. The array is scanned exactly once.</li>
+          <li><strong>Space complexity:</strong> <code>O(1)</code>. It modifies the array in place, with only two indexes.</li>
+          <li><strong>Design insight:</strong> this is a stable filter. The relative order of the kept elements is unchanged.</li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const samples = [
+      {
+        name: "Sample A",
+        data: [10, 20, 30, 20, 40, 20, 50],
+        target: 20
+      },
+      {
+        name: "Sample B",
+        data: [7, 7, 2, 7, 3, 4, 7, 5],
+        target: 7
+      },
+      {
+        name: "Sample C",
+        data: [1, 3, 5, 7, 9],
+        target: 2
+      }
+    ];
+
+    const sampleRow = document.getElementById("sampleRow");
+    const arrayGrid = document.getElementById("arrayGrid");
+    const explainBox = document.getElementById("explainBox");
+    const stepBtn = document.getElementById("stepBtn");
+    const playBtn = document.getElementById("playBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const pointerI = document.getElementById("pointerI");
+    const pointerK = document.getElementById("pointerK");
+    const originalLength = document.getElementById("originalLength");
+    const newLength = document.getElementById("newLength");
+    const targetValue = document.getElementById("targetValue");
+    const traceBody = document.getElementById("traceBody");
+    const codeLines = [...document.querySelectorAll(".code-line")];
+
+    let autoTimer = null;
+    let currentSampleIndex = 0;
+    let frames = [];
+    let currentStep = 0;
+
+    function buildFrames(sample) {
+      const frames = [];
+      const working = sample.data.slice();
+      const original = sample.data.slice();
+      let k = 0;
+
+      frames.push({
+        i: 0,
+        k: 0,
+        length: original.length,
+        data: working.slice(),
+        action: "scan",
+        line: 3,
+        text: `Initialize write pointer k = 0. We are ready to compact all elements not equal to ${sample.target}.`,
+        original,
+        target: sample.target
+      });
+
+      for (let i = 0; i < original.length; i += 1) {
+        const value = original[i];
+        const keep = value !== sample.target;
+        const writeIndex = k;
+
+        frames.push({
+          i,
+          k,
+          length: original.length,
+          data: working.slice(),
+          action: keep ? "scan-keep" : "scan-drop",
+          line: keep ? 5 : 4,
+          text: keep
+            ? `Inspect data[${i}] = ${value}. Because it is not ${sample.target}, this value should stay.`
+            : `Inspect data[${i}] = ${value}. It matches ${sample.target}, so it will be skipped.`,
+          original,
+          target: sample.target
+        });
+
+        if (keep) {
+          working[writeIndex] = value;
+          k += 1;
+          frames.push({
+            i,
+            k,
+            length: original.length,
+            data: working.slice(),
+            action: "keep",
+            line: 6,
+            writeIndex,
+            text: `Write ${value} into data[${writeIndex}] and advance k to ${k}. The kept prefix is always compact.`,
+            original,
+            target: sample.target
+          });
+        } else {
+          frames.push({
+            i,
+            k,
+            length: original.length,
+            data: working.slice(),
+            action: "drop",
+            line: 7,
+            text: `Do not copy this value. k stays at ${k}, so the next kept element will overwrite this gap.`,
+            original,
+            target: sample.target
+          });
+        }
+      }
+
+      frames.push({
+        i: original.length,
+        k,
+        length: k,
+        data: working.slice(),
+        action: "finish",
+        line: 9,
+        text: `Traversal is done. Set length = k = ${k}. Only the first ${k} cells remain logically valid.`,
+        original,
+        target: sample.target
+      });
+
+      return frames;
+    }
+
+    function renderSampleButtons() {
+      sampleRow.innerHTML = "";
+      samples.forEach((sample, index) => {
+        const btn = document.createElement("button");
+        btn.className = "sample-btn ghost";
+        btn.textContent = `${sample.name}: [${sample.data.join(", ")}], delete ${sample.target}`;
+        if (index === currentSampleIndex) {
+          btn.classList.add("active");
+        }
+        btn.addEventListener("click", () => {
+          stopAuto();
+          currentSampleIndex = index;
+          initialize();
+        });
+        sampleRow.appendChild(btn);
+      });
+    }
+
+    function render() {
+      const frame = frames[currentStep];
+      const sample = samples[currentSampleIndex];
+
+      targetValue.textContent = sample.target;
+      originalLength.textContent = sample.data.length;
+      pointerI.textContent = frame.i;
+      pointerK.textContent = frame.k;
+      newLength.textContent = frame.action === "finish" ? frame.length : frame.k;
+      explainBox.innerHTML = `
+        <div class="status-tag ${frame.action.includes("drop") ? "drop" : frame.action.includes("keep") ? "keep" : "scan"}">
+          <strong>${labelFor(frame.action)}</strong>
+          <span>${frame.text}</span>
+        </div>
+      `;
+
+      codeLines.forEach((line) => {
+        const isActive = Number(line.dataset.line) === frame.line;
+        line.classList.toggle("active", isActive);
+      });
+
+      arrayGrid.innerHTML = "";
+      frame.original.forEach((originalValue, index) => {
+        const cell = document.createElement("div");
+        const effectiveLength = frame.action === "finish" ? frame.length : frame.original.length;
+        const currentValue = frame.data[index];
+
+        cell.className = "cell";
+        if (index === frame.i && frame.i < frame.original.length) {
+          cell.classList.add("active-i");
+        }
+        if (index === frame.k && frame.action !== "finish" && frame.k < frame.original.length) {
+          cell.classList.add("active-k");
+        }
+        if (index >= effectiveLength) {
+          cell.classList.add("inactive");
+        }
+        if (index < frame.k) {
+          cell.classList.add("kept");
+        }
+        if ((frame.action === "drop" || frame.action === "scan-drop") && index === frame.i) {
+          cell.classList.add("removed");
+        }
+
+        const top = document.createElement("div");
+        top.className = "marker-row";
+        top.innerHTML = `
+          <span class="marker i ${index === frame.i && frame.i < frame.original.length ? "visible" : ""}">i</span>
+          <span class="marker k ${index === frame.k && frame.action !== "finish" && frame.k < frame.original.length ? "visible" : ""}">k</span>
+        `;
+
+        const value = document.createElement("div");
+        value.className = "value";
+        value.textContent = currentValue;
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.innerHTML = `<span>index ${index}</span><span>was ${originalValue}</span>`;
+
+        cell.appendChild(top);
+        cell.appendChild(value);
+        cell.appendChild(meta);
+        arrayGrid.appendChild(cell);
+      });
+
+      traceBody.innerHTML = "";
+      frames.forEach((item, index) => {
+        const row = document.createElement("tr");
+        if (index === currentStep) {
+          row.classList.add("active-row");
+        }
+        row.innerHTML = `
+          <td>${item.i}</td>
+          <td>${item.k}</td>
+        `;
+        traceBody.appendChild(row);
+      });
+
+      stepBtn.disabled = currentStep >= frames.length - 1;
+    }
+
+    function labelFor(action) {
+      if (action === "keep" || action === "scan-keep") return "Keep";
+      if (action === "drop" || action === "scan-drop") return "Delete";
+      if (action === "finish") return "Finish";
+      return "Scan";
+    }
+
+    function nextStep() {
+      if (currentStep < frames.length - 1) {
+        currentStep += 1;
+        render();
+      } else {
+        stopAuto();
+      }
+    }
+
+    function resetPlayback() {
+      currentStep = 0;
+      render();
+    }
+
+    function stopAuto() {
+      if (autoTimer !== null) {
+        window.clearInterval(autoTimer);
+        autoTimer = null;
+      }
+      playBtn.textContent = "Auto play";
+    }
+
+    function toggleAuto() {
+      if (autoTimer !== null) {
+        stopAuto();
+        return;
+      }
+      playBtn.textContent = "Pause";
+      autoTimer = window.setInterval(() => {
+        if (currentStep >= frames.length - 1) {
+          stopAuto();
+          return;
+        }
+        nextStep();
+      }, 1000);
+    }
+
+    function initialize() {
+      renderSampleButtons();
+      frames = buildFrames(samples[currentSampleIndex]);
+      currentStep = 0;
+      render();
+    }
+
+    stepBtn.addEventListener("click", nextStep);
+    playBtn.addEventListener("click", toggleAuto);
+    resetBtn.addEventListener("click", () => {
+      stopAuto();
+      resetPlayback();
+    });
+
+    initialize();
+  </script>
+</body>
+</html>
