@@ -52,46 +52,76 @@ typedef struct StudNode
 
 ## 1.2
 
-在教材PPT关于程序计时，这里提供计时代码，参考[C 语言中的 time 函数总结](https://www.runoob.com/w3cnote/c-time-func-summary.html)
+在教材PPT关于程序计时,传统的计时代码`clock()`(参考[C 语言中的 time 函数总结](https://www.runoob.com/w3cnote/c-time-func-summary.html))由于来自C语言标准库导致其高度依赖操作系统,其中`CLOCKS_PER_SEC`为实现跨平台而牺牲统一的转换系数,本身精度不足导致`Windows`上大量出现`error(0.000000)`错误,统一的`clock()`也带来跨平台上对时间测量的潜在差异(`Windows`:`wall-clock time`,`MacOS`和`Linux`:`CPU time`),这点尤其体现在面对频繁I/O流、用户输入等操作中。
 
+因此,普遍情况下,应调用基于不同平台的高精度API(`Windows`:`QueryPerformanceCounter()`,`Linux`:`clock_gettime(CLOCK_MONOTONIC)``MacOS`:`mach_absolute_time()`)以统一记录`Wall-clock time`并提前`Warm-up`抛开初始化或首次执行时的异常开销,以实现最佳实践。
+
+目前给出`Windows`和`MacOS`版本:
 ```c
 #include <stdio.h>
-#include <time.h>
+#ifdef _WIN32
+    #include <windows.h>
+    typedef LARGE_INTEGER timer;
+    void timer_start(timer *t){
+        QueryPerformanceCounter(t);}
+    double timer_elapsed(timer *t){
+        LARGE_INTEGER end, freq;
+        QueryPerformanceCounter(&end);
+        QueryPerformanceFrequency(&freq);
+        return (double)(end.QuadPart-t->QuadPart)/freq.QuadPart;
+    }
+#elif defined(__APPLE__)
+    #include <mach/mach_time.h>
+    typedef struct { uint64_t start; } timer;
+    void timer_start(timer *t){
+        t->start = mach_absolute_time();}
+    double timer_elapsed(timer *t) {
+        uint64_t end = mach_absolute_time();
+        mach_timebase_info_data_t info;
+        mach_timebase_info(&info);
+        uint64_t nanos=(end-t->start)*info.numer/info.denom;
+        return (double)nanos/1e9;
+    }
+#endif
 
 int a[60][10000];
 
-void
-foo ()
-{
-  for (int i = 0; i < 60; i++)
-    for (int j = 0; j < 10000; j++)
-      a[i][j] = 0;
-}
-
-void
-bar ()
-{
-  for (int j = 0; j < 10000; j++)
+void foo() {
     for (int i = 0; i < 60; i++)
-      a[i][j] = 0;
+        for (int j = 0; j < 10000; j++)
+            a[i][j] = 0;
 }
 
-int
-main ()
-{
-  clock_t start, end;
-
-  start = clock ();
-  foo ();
-  end = clock ();
-  printf ("foo takes %f\n", (double)(end - start) / CLOCKS_PER_SEC);
-
-  start = clock ();
-  foo ();
-  end = clock ();
-  printf ("bar takes %f\n", (double)(end - start) / CLOCKS_PER_SEC);
+void bar() {
+    for (int j = 0; j < 10000; j++)
+        for (int i = 0; i < 60; i++)
+            a[i][j] = 0;
 }
+
+int main() {
+    timer t;
+    double tf, tb;
+
+    foo(); 
+    bar();
+
+    
+    timer_start(&t); 
+    foo(); 
+    tf = timer_elapsed(&t);
+        
+    timer_start(&t); 
+    bar(); 
+    tb = timer_elapsed(&t);
+
+        printf("foo takes:%.6f\tbar takes:%.6f\tratio:%.6f\n", tf, tb, tf/tb);
+    
+    return 0;
+}
+
 ```
+
+此外,值得注意的是,高精度`API`尤其受CPU线程切换、频率波动、缓存的后精准命中等因素影响导致计时偶尔大幅偏离"预期",因此在衡量"快""慢"问题上常常以观察倍数的统计分布作为参考依据,事实上,绝大多数情况下,我们更多关心于"快""慢"本身。
 
 ## 1.3
 
