@@ -48,3 +48,27 @@ vertex in the graph. A graph that is not connected consists of a set of connecte
 ![representation](graph-representation.png)
 
 对于无向图，所有邻接表的长度之和等于$2|E|$；对于有向图，所有邻接表的长度之和等于$|E|$。因此，邻接表的空间复杂度是$O(|V|+|E|)$，而邻接矩阵的空间复杂度是$O(|V|^2)$。
+
+不难发现，邻接表的实现很简单，即每个节点对应一个列表，列表中存储该节点的邻居节点。这个列表的具体实现有多种方式，可以是链表、数组，甚至是哈希表、红黑树等，具体选择取决于应用场景和性能需求。下面通过链表的方式举例：
+
+```c
+// 邻接表中每个元素表示一个边，包含一个邻居节点ID和指向下一个边的指针
+typedef struct Edge {
+  int vertex;
+  struct Edge *next;
+} Edge;
+
+// 邻接表本身通过首节点表示，size可选
+typedef struct {
+  Edge *head;
+  int size;
+} List;
+
+typedef struct {
+  int V;
+  int E;
+  List *adj; // 邻接表数组，adj[i]表示节点i的邻接表
+} Graph;
+```
+
+这样添加边的时候就是在对应链表上执行头插法，比教材中晦涩的代码更好理解。
