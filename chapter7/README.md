@@ -225,11 +225,11 @@ $$
 类似的，还有**加权平均长度**：
 
 $$
-WAL = \frac{WPL}{\sum_{i=1}^{n} w_i}
+\frac{WPL}{\sum_{i=1}^{n} w_i}
 $$
 
 在编码场景，频次或频率就是权重，假设频率 $p_i = \frac{w_i}{\sum_{j=1}^{n} w_j}$，则加权平均长度可以表示为：
 
 $$
-WAL = \sum_{i=1}^{n} p_i \cdot l_i
+\sum_{i=1}^{n} p_i \cdot l_i
 $$
