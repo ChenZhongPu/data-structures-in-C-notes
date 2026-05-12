@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>DFS 演示 - 深度优先搜索</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f5f7;
+    color: #222;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px 0;
+    color: #b02020;
+  }
+  .subtitle {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  .panel h2 {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+    color: #b02020;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: 420px;
+    background: #fafafa;
+    border-radius: 6px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    align-items: center;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #b02020;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  button:hover:not(:disabled) { background: #8a1818; }
+  button:disabled {
+    background: #bbb;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: #555;
+  }
+  button.secondary:hover:not(:disabled) { background: #333; }
+  label {
+    font-size: 13px;
+    color: #555;
+  }
+  select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+  }
+
+  /* visited table */
+  .visited-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .visited-table th, .visited-table td {
+    border: 1px solid #d0d0d0;
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+  .visited-table th {
+    background: #eee;
+    color: #b02020;
+    font-family: Consolas, Menlo, monospace;
+  }
+  .visited-table td {
+    font-family: Consolas, Menlo, monospace;
+    font-weight: bold;
+    transition: background 0.3s;
+  }
+  .visited-table td.true {
+    background: #d4edda;
+    color: #155724;
+  }
+  .visited-table td.false {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  .visited-table td.current {
+    outline: 3px solid #ff9800;
+    outline-offset: -3px;
+  }
+
+  /* stack */
+  .stack-wrap {
+    border: 1px dashed #bbb;
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 90px;
+    background: #fdfdfd;
+  }
+  .stack {
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 4px;
+    align-items: flex-start;
+  }
+  .stack-item {
+    padding: 6px 12px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 4px;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    min-width: 120px;
+  }
+  .stack-item.top {
+    background: #ffe082;
+    font-weight: bold;
+  }
+  .stack-label {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 6px;
+  }
+
+  /* log */
+  .log {
+    max-height: 180px;
+    overflow-y: auto;
+    background: #1e1e1e;
+    color: #dcdcdc;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .log .line {
+    white-space: pre-wrap;
+  }
+  .log .visit { color: #4ec9b0; }
+  .log .skip  { color: #ce9178; }
+  .log .back  { color: #c586c0; }
+  .log .done  { color: #569cd6; font-weight: bold; }
+
+  /* adjacency list display */
+  .adj-list {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13.5px;
+    line-height: 1.9;
+  }
+  .adj-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .adj-idx {
+    font-weight: bold;
+    color: #b02020;
+    width: 28px;
+  }
+  .adj-node {
+    display: inline-block;
+    min-width: 22px;
+    text-align: center;
+    padding: 1px 6px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #fff;
+    margin: 0 2px;
+    transition: all 0.2s;
+  }
+  .adj-node.visiting {
+    background: #ff9800;
+    color: #fff;
+    border-color: #e65100;
+    transform: scale(1.15);
+  }
+  .adj-node.visited {
+    background: #c8e6c9;
+    border-color: #2e7d32;
+  }
+  .adj-arrow { color: #777; }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #555;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid #333;
+  }
+
+  /* SVG styles */
+  .edge { stroke: #333; stroke-width: 2.5; }
+  .edge.active { stroke: #ff9800; stroke-width: 4; }
+  .edge.tree   { stroke: #2e7d32; stroke-width: 4; }
+  .node-circle {
+    stroke: #333;
+    stroke-width: 2;
+    fill: #fff;
+    transition: fill 0.3s, stroke 0.3s;
+  }
+  .node-circle.visited { fill: #c8e6c9; stroke: #2e7d32; }
+  .node-circle.current { fill: #ff9800; stroke: #e65100; stroke-width: 3; }
+  .node-label {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 20px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    fill: #222;
+  }
+
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    svg { height: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>DFS 演示 —— 深度优先搜索</h1>
+<div class="subtitle">
+  基于邻接表的图遍历，使用 <code>visited[]</code> 作为访问标记。
+</div>
+
+<div class="container">
+
+  <!-- 左侧：图 + 控制 -->
+  <div class="panel">
+    <h2>图（graph）</h2>
+    <svg id="graph" viewBox="0 0 600 420"></svg>
+
+    <div class="legend">
+      <span><span class="dot" style="background:#fff"></span>未访问</span>
+      <span><span class="dot" style="background:#ff9800;border-color:#e65100"></span>当前节点</span>
+      <span><span class="dot" style="background:#c8e6c9;border-color:#2e7d32"></span>已访问</span>
+      <span><span class="dot" style="background:#2e7d32;border-radius:0;width:16px;height:3px;border:none"></span>DFS 树边</span>
+    </div>
+
+    <div class="controls">
+      <label>起点
+        <select id="startVertex">
+          <option value="0" selected>0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </label>
+      <label>速度
+        <select id="speed">
+          <option value="1200">慢</option>
+          <option value="700" selected>中</option>
+          <option value="300">快</option>
+        </select>
+      </label>
+      <button id="btnStep">下一步</button>
+      <button id="btnAuto">自动播放</button>
+      <button id="btnReset" class="secondary">重置</button>
+    </div>
+  </div>
+
+  <!-- 右侧：状态面板 -->
+  <div>
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>visited[] 标记</h2>
+      <table class="visited-table" id="visitedTable">
+        <thead>
+          <tr>
+            <th>v</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="visitedRow">
+            <th>visited</th>
+            <td data-v="0">F</td>
+            <td data-v="1">F</td>
+            <td data-v="2">F</td>
+            <td data-v="3">F</td>
+            <td data-v="4">F</td>
+            <td data-v="5">F</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="stack-label">递归调用栈（栈顶 = 当前节点）</div>
+      <div class="stack-wrap">
+        <div class="stack" id="stack"></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>邻接表</h2>
+      <div class="adj-list" id="adjList"></div>
+    </div>
+
+    <div class="panel">
+      <h2>执行日志</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 图数据（来自 maze-adj.png） ==========
+const adj = {
+  0: [2, 1, 5],
+  1: [0, 2],
+  2: [0, 1, 3, 4],
+  3: [5, 4, 2],
+  4: [3, 2],
+  5: [3, 0],
+};
+
+// 节点坐标（对应 maze-graph.png 的布局）
+const pos = {
+  0: { x:  90, y:  80 },
+  1: { x: 230, y: 165 },
+  2: { x: 490, y: 110 },
+  3: { x: 300, y: 280 },
+  4: { x: 500, y: 290 },
+  5: { x: 120, y: 300 },
+};
+
+// 无向图的边集合（去重）
+const edges = [
+  [0,1],[0,2],[0,5],
+  [1,2],
+  [2,3],[2,4],
+  [3,4],[3,5],
+];
+
+// ========== 渲染图 SVG ==========
+const svg = document.getElementById("graph");
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function edgeKey(a, b) {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+function drawGraph() {
+  svg.innerHTML = "";
+
+  // 边
+  for (const [a, b] of edges) {
+    const line = document.createElementNS(SVG_NS, "line");
+    line.setAttribute("x1", pos[a].x);
+    line.setAttribute("y1", pos[a].y);
+    line.setAttribute("x2", pos[b].x);
+    line.setAttribute("y2", pos[b].y);
+    line.setAttribute("class", "edge");
+    line.setAttribute("data-key", edgeKey(a, b));
+    svg.appendChild(line);
+  }
+
+  // 节点
+  for (const v of Object.keys(pos)) {
+    const c = document.createElementNS(SVG_NS, "circle");
+    c.setAttribute("cx", pos[v].x);
+    c.setAttribute("cy", pos[v].y);
+    c.setAttribute("r", 26);
+    c.setAttribute("class", "node-circle");
+    c.setAttribute("data-v", v);
+    svg.appendChild(c);
+
+    const t = document.createElementNS(SVG_NS, "text");
+    t.setAttribute("x", pos[v].x);
+    t.setAttribute("y", pos[v].y);
+    t.setAttribute("class", "node-label");
+    t.textContent = v;
+    svg.appendChild(t);
+  }
+}
+
+// ========== 渲染邻接表 ==========
+function drawAdjList() {
+  const box = document.getElementById("adjList");
+  box.innerHTML = "";
+  for (const v of Object.keys(adj)) {
+    const row = document.createElement("div");
+    row.className = "adj-row";
+    row.innerHTML =
+      `<span class="adj-idx">${v}:</span>` +
+      adj[v].map(n =>
+        `<span class="adj-node" data-adj="${v}-${n}">${n}</span>`
+      ).join(`<span class="adj-arrow">→</span>`);
+    box.appendChild(row);
+  }
+}
+
+// ========== DFS 状态机：把过程展开成一步步 ==========
+// 每步包含：type + 数据，用于驱动 UI
+//   enter    —— 进入/标记 visited[v]
+//   check    —— 检查邻居 w
+//   skip     —— 邻居 w 已访问，跳过
+//   recurse  —— 对邻居 w 递归（下一步会 enter w）
+//   return   —— 从 v 返回上层
+//   finish   —— 全部结束
+
+function buildSteps(start) {
+  const steps = [];
+  const visited = new Array(6).fill(false);
+
+  function dfs(v, parent) {
+    visited[v] = true;
+    steps.push({ type: "enter", v, parent });
+
+    for (const w of adj[v]) {
+      steps.push({ type: "check", v, w });
+      if (visited[w]) {
+        steps.push({ type: "skip", v, w });
+      } else {
+        steps.push({ type: "recurse", v, w });
+        dfs(w, v);
+      }
+    }
+    steps.push({ type: "return", v, parent });
+  }
+
+  dfs(start, -1);
+  steps.push({ type: "finish" });
+  return steps;
+}
+
+// ========== UI 更新 ==========
+const logEl = document.getElementById("log");
+const stackEl = document.getElementById("stack");
+
+function resetUI() {
+  drawGraph();
+  drawAdjList();
+  for (const td of document.querySelectorAll("#visitedRow td")) {
+    td.textContent = "F";
+    td.classList.remove("true", "false", "current");
+    td.classList.add("false");
+  }
+  logEl.innerHTML = "";
+  stackEl.innerHTML = "";
+}
+
+function setVisited(v, value, current = false) {
+  const td = document.querySelector(`#visitedRow td[data-v="${v}"]`);
+  td.textContent = value ? "T" : "F";
+  td.classList.toggle("true", value);
+  td.classList.toggle("false", !value);
+  document.querySelectorAll("#visitedRow td").forEach(x => x.classList.remove("current"));
+  if (current) td.classList.add("current");
+}
+
+function setNodeState(v, state) {
+  const c = document.querySelector(`.node-circle[data-v="${v}"]`);
+  c.classList.remove("visited", "current");
+  if (state) c.classList.add(state);
+}
+
+function markTreeEdge(a, b) {
+  const line = document.querySelector(`line[data-key="${edgeKey(a, b)}"]`);
+  if (line) line.setAttribute("class", "edge tree");
+}
+
+function highlightEdge(a, b, on) {
+  const line = document.querySelector(`line[data-key="${edgeKey(a, b)}"]`);
+  if (!line) return;
+  const cur = line.getAttribute("class") || "edge";
+  if (on) {
+    if (!cur.includes("tree")) line.setAttribute("class", "edge active");
+  } else {
+    if (cur.includes("active")) line.setAttribute("class", "edge");
+  }
+}
+
+function setAdjHighlight(v, w, cls) {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    if (e.dataset.adj === `${v}-${w}`) e.classList.add(cls);
+  });
+}
+
+function clearAdjHighlight() {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    e.classList.remove("visiting");
+  });
+}
+
+function markAdjVisited(v, w) {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    if (e.dataset.adj === `${v}-${w}`) e.classList.add("visited");
+  });
+}
+
+function pushStack(v) {
+  const div = document.createElement("div");
+  div.className = "stack-item";
+  div.dataset.v = v;
+  div.textContent = `dfs(${v})`;
+  stackEl.appendChild(div);
+  refreshStackTop();
+}
+
+function popStack(v) {
+  const items = stackEl.querySelectorAll(".stack-item");
+  for (let i = items.length - 1; i >= 0; i--) {
+    if (items[i].dataset.v == v) {
+      items[i].remove();
+      break;
+    }
+  }
+  refreshStackTop();
+}
+
+function refreshStackTop() {
+  const items = stackEl.querySelectorAll(".stack-item");
+  items.forEach(e => e.classList.remove("top"));
+  if (items.length) items[items.length - 1].classList.add("top");
+}
+
+function log(line, cls = "") {
+  const d = document.createElement("div");
+  d.className = "line " + cls;
+  d.textContent = line;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+// 当前高亮的“正在检查的邻居边”，用于下一步清理
+let lastCheckEdge = null;
+
+function applyStep(step) {
+  // 清掉上一步的“检查高亮”
+  if (lastCheckEdge) {
+    highlightEdge(lastCheckEdge[0], lastCheckEdge[1], false);
+    lastCheckEdge = null;
+  }
+  clearAdjHighlight();
+
+  switch (step.type) {
+    case "enter": {
+      setVisited(step.v, true, true);
+      // 把之前的当前节点变成普通已访问
+      document.querySelectorAll(".node-circle.current").forEach(c => {
+        c.classList.remove("current");
+        c.classList.add("visited");
+      });
+      setNodeState(step.v, "current");
+      pushStack(step.v);
+      if (step.parent >= 0) markTreeEdge(step.parent, step.v);
+      log(`→ 访问 ${step.v}，visited[${step.v}] = true`, "visit");
+      break;
+    }
+    case "check": {
+      highlightEdge(step.v, step.w, true);
+      lastCheckEdge = [step.v, step.w];
+      setAdjHighlight(step.v, step.w, "visiting");
+      log(`  检查 ${step.v} 的邻居 ${step.w}`);
+      break;
+    }
+    case "skip": {
+      markAdjVisited(step.v, step.w);
+      log(`    ${step.w} 已访问 → 跳过`, "skip");
+      break;
+    }
+    case "recurse": {
+      markAdjVisited(step.v, step.w);
+      log(`    ${step.w} 未访问 → 递归 dfs(${step.w})`, "visit");
+      break;
+    }
+    case "return": {
+      popStack(step.v);
+      setNodeState(step.v, "visited");
+      // 让栈顶（父节点）重新变成 current
+      const items = stackEl.querySelectorAll(".stack-item");
+      if (items.length) {
+        const top = items[items.length - 1].dataset.v;
+        setNodeState(top, "current");
+        setVisited(top, true, true);
+      } else {
+        // 栈空，清掉 visited 表格的 current
+        document.querySelectorAll("#visitedRow td").forEach(x => x.classList.remove("current"));
+      }
+      log(`← 从 ${step.v} 返回`, "back");
+      break;
+    }
+    case "finish": {
+      log(`✓ DFS 完成`, "done");
+      break;
+    }
+  }
+}
+
+// ========== 控制 ==========
+let steps = [];
+let idx = 0;
+let timer = null;
+
+const btnStep = document.getElementById("btnStep");
+const btnAuto = document.getElementById("btnAuto");
+const btnReset = document.getElementById("btnReset");
+const startSel = document.getElementById("startVertex");
+const speedSel = document.getElementById("speed");
+
+function init() {
+  stopAuto();
+  resetUI();
+  steps = buildSteps(parseInt(startSel.value, 10));
+  idx = 0;
+  btnStep.disabled = false;
+  btnAuto.disabled = false;
+  btnAuto.textContent = "自动播放";
+  log(`从顶点 ${startSel.value} 开始 DFS，共 ${steps.length} 步`, "done");
+}
+
+function stepOnce() {
+  if (idx >= steps.length) return;
+  applyStep(steps[idx]);
+  idx++;
+  if (idx >= steps.length) {
+    btnStep.disabled = true;
+    btnAuto.disabled = true;
+    btnAuto.textContent = "完成";
+    stopAuto();
+  }
+}
+
+function stopAuto() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+  if (!btnAuto.disabled) btnAuto.textContent = "自动播放";
+}
+
+btnStep.addEventListener("click", stepOnce);
+btnReset.addEventListener("click", init);
+startSel.addEventListener("change", init);
+
+btnAuto.addEventListener("click", () => {
+  if (timer) {
+    stopAuto();
+    return;
+  }
+  btnAuto.textContent = "暂停";
+  const interval = parseInt(speedSel.value, 10);
+  timer = setInterval(() => {
+    stepOnce();
+    if (idx >= steps.length) stopAuto();
+  }, interval);
+});
+
+// 首次加载
+init();
+</script>
+</body>
+</html>
