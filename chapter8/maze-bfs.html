@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>BFS 演示 - 广度优先搜索</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    margin: 0;
+    padding: 24px;
+    background: #f5f5f7;
+    color: #222;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0 0 4px 0;
+    color: #1565c0;
+  }
+  .subtitle {
+    color: #666;
+    margin-bottom: 20px;
+    font-size: 14px;
+  }
+  .container {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+  .panel h2 {
+    font-size: 16px;
+    margin: 0 0 12px 0;
+    color: #1565c0;
+  }
+  svg {
+    display: block;
+    width: 100%;
+    height: 420px;
+    background: #fafafa;
+    border-radius: 6px;
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 14px;
+    align-items: center;
+  }
+  button {
+    padding: 8px 14px;
+    border: none;
+    border-radius: 6px;
+    background: #1565c0;
+    color: #fff;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s;
+  }
+  button:hover:not(:disabled) { background: #0d47a1; }
+  button:disabled {
+    background: #bbb;
+    cursor: not-allowed;
+  }
+  button.secondary {
+    background: #555;
+  }
+  button.secondary:hover:not(:disabled) { background: #333; }
+  label {
+    font-size: 13px;
+    color: #555;
+  }
+  select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 13px;
+  }
+
+  /* visited table */
+  .visited-table {
+    border-collapse: collapse;
+    width: 100%;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .visited-table th, .visited-table td {
+    border: 1px solid #d0d0d0;
+    padding: 8px 6px;
+    font-size: 14px;
+  }
+  .visited-table th {
+    background: #eee;
+    color: #1565c0;
+    font-family: Consolas, Menlo, monospace;
+  }
+  .visited-table td {
+    font-family: Consolas, Menlo, monospace;
+    font-weight: bold;
+    transition: background 0.3s;
+  }
+  .visited-table td.true {
+    background: #d4edda;
+    color: #155724;
+  }
+  .visited-table td.false {
+    background: #f8d7da;
+    color: #721c24;
+  }
+  .visited-table td.current {
+    outline: 3px solid #ff9800;
+    outline-offset: -3px;
+  }
+
+  /* queue */
+  .queue-wrap {
+    border: 1px dashed #bbb;
+    border-radius: 6px;
+    padding: 10px;
+    min-height: 70px;
+    background: #fdfdfd;
+  }
+  .queue {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .queue-item {
+    padding: 6px 14px;
+    background: #e3f2fd;
+    border: 1px solid #1976d2;
+    border-radius: 4px;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    font-weight: bold;
+    color: #0d47a1;
+  }
+  .queue-item.front {
+    background: #1976d2;
+    color: #fff;
+  }
+  .queue-label {
+    font-size: 12px;
+    color: #777;
+    margin-bottom: 6px;
+  }
+  .queue-empty {
+    color: #aaa;
+    font-size: 12px;
+    font-style: italic;
+  }
+  .queue-arrow {
+    color: #999;
+    font-size: 14px;
+  }
+
+  /* log */
+  .log {
+    max-height: 180px;
+    overflow-y: auto;
+    background: #1e1e1e;
+    color: #dcdcdc;
+    padding: 10px;
+    border-radius: 6px;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+  .log .line { white-space: pre-wrap; }
+  .log .visit   { color: #4ec9b0; }
+  .log .skip    { color: #ce9178; }
+  .log .enqueue { color: #9cdcfe; }
+  .log .dequeue { color: #dcdcaa; }
+  .log .done    { color: #569cd6; font-weight: bold; }
+
+  /* adjacency list display */
+  .adj-list {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13.5px;
+    line-height: 1.9;
+  }
+  .adj-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .adj-idx {
+    font-weight: bold;
+    color: #1565c0;
+    width: 28px;
+  }
+  .adj-node {
+    display: inline-block;
+    min-width: 22px;
+    text-align: center;
+    padding: 1px 6px;
+    border: 1px solid #666;
+    border-radius: 3px;
+    background: #fff;
+    margin: 0 2px;
+    transition: all 0.2s;
+  }
+  .adj-node.visiting {
+    background: #ff9800;
+    color: #fff;
+    border-color: #e65100;
+    transform: scale(1.15);
+  }
+  .adj-node.enqueued {
+    background: #bbdefb;
+    border-color: #1976d2;
+  }
+  .adj-node.visited {
+    background: #c8e6c9;
+    border-color: #2e7d32;
+  }
+  .adj-arrow { color: #777; }
+
+  .legend {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #555;
+  }
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 1.5px solid #333;
+  }
+
+  /* SVG styles */
+  .edge { stroke: #333; stroke-width: 2.5; }
+  .edge.active { stroke: #ff9800; stroke-width: 4; }
+  .edge.tree   { stroke: #1976d2; stroke-width: 4; }
+  .node-circle {
+    stroke: #333;
+    stroke-width: 2;
+    fill: #fff;
+    transition: fill 0.3s, stroke 0.3s;
+  }
+  .node-circle.enqueued { fill: #bbdefb; stroke: #1976d2; }
+  .node-circle.visited  { fill: #c8e6c9; stroke: #2e7d32; }
+  .node-circle.current  { fill: #ff9800; stroke: #e65100; stroke-width: 3; }
+  .node-label {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 20px;
+    font-weight: bold;
+    text-anchor: middle;
+    dominant-baseline: central;
+    pointer-events: none;
+    fill: #222;
+  }
+  .node-level {
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12px;
+    font-weight: bold;
+    text-anchor: middle;
+    pointer-events: none;
+    fill: #1565c0;
+  }
+
+  @media (max-width: 900px) {
+    .container { grid-template-columns: 1fr; }
+    svg { height: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<h1>BFS 演示 —— 广度优先搜索</h1>
+<div class="subtitle">
+  基于邻接表的图遍历，使用 <code>visited[]</code> 作为访问标记，<code>queue</code> 作为辅助数据结构。
+</div>
+
+<div class="container">
+
+  <!-- 左侧：图 + 控制 -->
+  <div class="panel">
+    <h2>图（graph）</h2>
+    <svg id="graph" viewBox="0 0 600 420"></svg>
+
+    <div class="legend">
+      <span><span class="dot" style="background:#fff"></span>未访问</span>
+      <span><span class="dot" style="background:#bbdefb;border-color:#1976d2"></span>已入队</span>
+      <span><span class="dot" style="background:#ff9800;border-color:#e65100"></span>当前节点</span>
+      <span><span class="dot" style="background:#c8e6c9;border-color:#2e7d32"></span>已处理</span>
+      <span><span class="dot" style="background:#1976d2;border-radius:0;width:16px;height:3px;border:none"></span>BFS 树边</span>
+    </div>
+
+    <div class="controls">
+      <label>起点
+        <select id="startVertex">
+          <option value="0" selected>0</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+        </select>
+      </label>
+      <label>速度
+        <select id="speed">
+          <option value="1200">慢</option>
+          <option value="700" selected>中</option>
+          <option value="300">快</option>
+        </select>
+      </label>
+      <button id="btnStep">下一步</button>
+      <button id="btnAuto">自动播放</button>
+      <button id="btnReset" class="secondary">重置</button>
+    </div>
+  </div>
+
+  <!-- 右侧：状态面板 -->
+  <div>
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>visited[] 标记</h2>
+      <table class="visited-table" id="visitedTable">
+        <thead>
+          <tr>
+            <th>v</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="visitedRow">
+            <th>visited</th>
+            <td data-v="0">F</td>
+            <td data-v="1">F</td>
+            <td data-v="2">F</td>
+            <td data-v="3">F</td>
+            <td data-v="4">F</td>
+            <td data-v="5">F</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="queue-label">队列 queue（左=队首 front，右=队尾 rear）</div>
+      <div class="queue-wrap">
+        <div class="queue" id="queue">
+          <span class="queue-empty">（空）</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom: 16px;">
+      <h2>邻接表</h2>
+      <div class="adj-list" id="adjList"></div>
+    </div>
+
+    <div class="panel">
+      <h2>执行日志</h2>
+      <div class="log" id="log"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== 图数据（来自 maze-adj.png） ==========
+const adj = {
+  0: [2, 1, 5],
+  1: [0, 2],
+  2: [0, 1, 3, 4],
+  3: [5, 4, 2],
+  4: [3, 2],
+  5: [3, 0],
+};
+
+const pos = {
+  0: { x:  90, y:  80 },
+  1: { x: 230, y: 165 },
+  2: { x: 490, y: 110 },
+  3: { x: 300, y: 280 },
+  4: { x: 500, y: 290 },
+  5: { x: 120, y: 300 },
+};
+
+const edges = [
+  [0,1],[0,2],[0,5],
+  [1,2],
+  [2,3],[2,4],
+  [3,4],[3,5],
+];
+
+// ========== 渲染图 SVG ==========
+const svg = document.getElementById("graph");
+const SVG_NS = "http://www.w3.org/2000/svg";
+
+function edgeKey(a, b) {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
+
+function drawGraph() {
+  svg.innerHTML = "";
+
+  for (const [a, b] of edges) {
+    const line = document.createElementNS(SVG_NS, "line");
+    line.setAttribute("x1", pos[a].x);
+    line.setAttribute("y1", pos[a].y);
+    line.setAttribute("x2", pos[b].x);
+    line.setAttribute("y2", pos[b].y);
+    line.setAttribute("class", "edge");
+    line.setAttribute("data-key", edgeKey(a, b));
+    svg.appendChild(line);
+  }
+
+  for (const v of Object.keys(pos)) {
+    const c = document.createElementNS(SVG_NS, "circle");
+    c.setAttribute("cx", pos[v].x);
+    c.setAttribute("cy", pos[v].y);
+    c.setAttribute("r", 26);
+    c.setAttribute("class", "node-circle");
+    c.setAttribute("data-v", v);
+    svg.appendChild(c);
+
+    const t = document.createElementNS(SVG_NS, "text");
+    t.setAttribute("x", pos[v].x);
+    t.setAttribute("y", pos[v].y);
+    t.setAttribute("class", "node-label");
+    t.textContent = v;
+    svg.appendChild(t);
+
+    // 层数标签占位（入队时再填）
+    const lvl = document.createElementNS(SVG_NS, "text");
+    lvl.setAttribute("x", pos[v].x + 28);
+    lvl.setAttribute("y", pos[v].y - 22);
+    lvl.setAttribute("class", "node-level");
+    lvl.setAttribute("data-level", v);
+    svg.appendChild(lvl);
+  }
+}
+
+function drawAdjList() {
+  const box = document.getElementById("adjList");
+  box.innerHTML = "";
+  for (const v of Object.keys(adj)) {
+    const row = document.createElement("div");
+    row.className = "adj-row";
+    row.innerHTML =
+      `<span class="adj-idx">${v}:</span>` +
+      adj[v].map(n =>
+        `<span class="adj-node" data-adj="${v}-${n}">${n}</span>`
+      ).join(`<span class="adj-arrow">→</span>`);
+    box.appendChild(row);
+  }
+}
+
+// ========== BFS 状态机 ==========
+// 步骤类型：
+//   start    —— 起点标记 + 入队
+//   dequeue  —— 从队首取出 v（作为当前节点）
+//   check    —— 检查 v 的邻居 w
+//   skip     —— w 已访问，跳过
+//   enqueue  —— w 未访问：标记 visited，入队
+//   processed—— v 的邻居遍历完毕，v 变为“已处理”
+//   finish
+
+function buildSteps(start) {
+  const steps = [];
+  const visited = new Array(6).fill(false);
+  const level = new Array(6).fill(-1);
+  const queue = [];
+
+  visited[start] = true;
+  level[start] = 0;
+  queue.push(start);
+  steps.push({ type: "start", v: start, level: 0 });
+
+  while (queue.length > 0) {
+    const v = queue.shift();
+    steps.push({ type: "dequeue", v });
+
+    for (const w of adj[v]) {
+      steps.push({ type: "check", v, w });
+      if (visited[w]) {
+        steps.push({ type: "skip", v, w });
+      } else {
+        visited[w] = true;
+        level[w] = level[v] + 1;
+        queue.push(w);
+        steps.push({ type: "enqueue", v, w, level: level[w] });
+      }
+    }
+    steps.push({ type: "processed", v });
+  }
+
+  steps.push({ type: "finish" });
+  return steps;
+}
+
+// ========== UI 更新 ==========
+const logEl = document.getElementById("log");
+const queueEl = document.getElementById("queue");
+
+function resetUI() {
+  drawGraph();
+  drawAdjList();
+  for (const td of document.querySelectorAll("#visitedRow td")) {
+    td.textContent = "F";
+    td.classList.remove("true", "false", "current");
+    td.classList.add("false");
+  }
+  logEl.innerHTML = "";
+  renderQueue([]);
+}
+
+function setVisited(v, value, current = false) {
+  const td = document.querySelector(`#visitedRow td[data-v="${v}"]`);
+  td.textContent = value ? "T" : "F";
+  td.classList.toggle("true", value);
+  td.classList.toggle("false", !value);
+  document.querySelectorAll("#visitedRow td").forEach(x => x.classList.remove("current"));
+  if (current) td.classList.add("current");
+}
+
+function setNodeState(v, state) {
+  const c = document.querySelector(`.node-circle[data-v="${v}"]`);
+  c.classList.remove("enqueued", "visited", "current");
+  if (state) c.classList.add(state);
+}
+
+function setLevelLabel(v, level) {
+  const t = document.querySelector(`text[data-level="${v}"]`);
+  if (t) t.textContent = `L${level}`;
+}
+
+function markTreeEdge(a, b) {
+  const line = document.querySelector(`line[data-key="${edgeKey(a, b)}"]`);
+  if (line) line.setAttribute("class", "edge tree");
+}
+
+function highlightEdge(a, b, on) {
+  const line = document.querySelector(`line[data-key="${edgeKey(a, b)}"]`);
+  if (!line) return;
+  const cur = line.getAttribute("class") || "edge";
+  if (on) {
+    if (!cur.includes("tree")) line.setAttribute("class", "edge active");
+  } else {
+    if (cur.includes("active")) line.setAttribute("class", "edge");
+  }
+}
+
+function setAdjHighlight(v, w, cls) {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    if (e.dataset.adj === `${v}-${w}`) e.classList.add(cls);
+  });
+}
+
+function clearAdjHighlight() {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    e.classList.remove("visiting");
+  });
+}
+
+function markAdjEnqueued(v, w) {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    if (e.dataset.adj === `${v}-${w}`) e.classList.add("enqueued");
+  });
+}
+
+function markAdjVisited(v, w) {
+  document.querySelectorAll(".adj-node").forEach(e => {
+    if (e.dataset.adj === `${v}-${w}`) e.classList.add("visited");
+  });
+}
+
+// 队列渲染
+let queueState = [];
+
+function renderQueue(arr, frontHighlight = false) {
+  queueEl.innerHTML = "";
+  if (arr.length === 0) {
+    queueEl.innerHTML = `<span class="queue-empty">（空）</span>`;
+    return;
+  }
+  arr.forEach((v, i) => {
+    const item = document.createElement("div");
+    item.className = "queue-item" + (frontHighlight && i === 0 ? " front" : "");
+    item.textContent = v;
+    queueEl.appendChild(item);
+    if (i < arr.length - 1) {
+      const arrow = document.createElement("span");
+      arrow.className = "queue-arrow";
+      arrow.textContent = "←";
+      queueEl.appendChild(arrow);
+    }
+  });
+}
+
+function enqueue(v) {
+  queueState.push(v);
+  renderQueue(queueState);
+}
+
+function dequeue() {
+  const v = queueState.shift();
+  renderQueue(queueState, true);
+  return v;
+}
+
+function log(line, cls = "") {
+  const d = document.createElement("div");
+  d.className = "line " + cls;
+  d.textContent = line;
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+let lastCheckEdge = null;
+
+function applyStep(step) {
+  if (lastCheckEdge) {
+    highlightEdge(lastCheckEdge[0], lastCheckEdge[1], false);
+    lastCheckEdge = null;
+  }
+  clearAdjHighlight();
+
+  switch (step.type) {
+    case "start": {
+      setVisited(step.v, true);
+      setNodeState(step.v, "enqueued");
+      setLevelLabel(step.v, 0);
+      enqueue(step.v);
+      log(`起点 ${step.v}：visited[${step.v}] = true，入队`, "enqueue");
+      break;
+    }
+    case "dequeue": {
+      // 上一个 current（如果有）变成 visited
+      document.querySelectorAll(".node-circle.current").forEach(c => {
+        c.classList.remove("current");
+        c.classList.add("visited");
+      });
+      const v = dequeue();
+      setNodeState(step.v, "current");
+      setVisited(step.v, true, true);
+      log(`← 出队：v = ${step.v}`, "dequeue");
+      break;
+    }
+    case "check": {
+      highlightEdge(step.v, step.w, true);
+      lastCheckEdge = [step.v, step.w];
+      setAdjHighlight(step.v, step.w, "visiting");
+      log(`  检查 ${step.v} 的邻居 ${step.w}`);
+      break;
+    }
+    case "skip": {
+      markAdjVisited(step.v, step.w);
+      log(`    ${step.w} 已访问 → 跳过`, "skip");
+      break;
+    }
+    case "enqueue": {
+      setVisited(step.w, true);
+      setNodeState(step.w, "enqueued");
+      setLevelLabel(step.w, step.level);
+      markTreeEdge(step.v, step.w);
+      enqueue(step.w);
+      markAdjEnqueued(step.v, step.w);
+      log(`    ${step.w} 未访问 → visited[${step.w}] = true，入队 (L${step.level})`, "enqueue");
+      break;
+    }
+    case "processed": {
+      setNodeState(step.v, "visited");
+      document.querySelectorAll("#visitedRow td").forEach(x => x.classList.remove("current"));
+      log(`  ${step.v} 的邻居遍历完毕`, "visit");
+      break;
+    }
+    case "finish": {
+      log(`✓ BFS 完成`, "done");
+      break;
+    }
+  }
+}
+
+// ========== 控制 ==========
+let steps = [];
+let idx = 0;
+let timer = null;
+
+const btnStep = document.getElementById("btnStep");
+const btnAuto = document.getElementById("btnAuto");
+const btnReset = document.getElementById("btnReset");
+const startSel = document.getElementById("startVertex");
+const speedSel = document.getElementById("speed");
+
+function init() {
+  stopAuto();
+  queueState = [];
+  resetUI();
+  steps = buildSteps(parseInt(startSel.value, 10));
+  idx = 0;
+  btnStep.disabled = false;
+  btnAuto.disabled = false;
+  btnAuto.textContent = "自动播放";
+  log(`从顶点 ${startSel.value} 开始 BFS，共 ${steps.length} 步`, "done");
+}
+
+function stepOnce() {
+  if (idx >= steps.length) return;
+  applyStep(steps[idx]);
+  idx++;
+  if (idx >= steps.length) {
+    btnStep.disabled = true;
+    btnAuto.disabled = true;
+    btnAuto.textContent = "完成";
+    stopAuto();
+  }
+}
+
+function stopAuto() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+  if (!btnAuto.disabled) btnAuto.textContent = "自动播放";
+}
+
+btnStep.addEventListener("click", stepOnce);
+btnReset.addEventListener("click", init);
+startSel.addEventListener("change", init);
+
+btnAuto.addEventListener("click", () => {
+  if (timer) {
+    stopAuto();
+    return;
+  }
+  btnAuto.textContent = "暂停";
+  const interval = parseInt(speedSel.value, 10);
+  timer = setInterval(() => {
+    stepOnce();
+    if (idx >= steps.length) stopAuto();
+  }, interval);
+});
+
+init();
+</script>
+</body>
+</html>
