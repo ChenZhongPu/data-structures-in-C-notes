@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prim 算法可视化</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+h1 { margin-bottom: 10px; color: #64ffda; }
+.container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+canvas { background: #16213e; border-radius: 12px; border: 1px solid #0f3460; }
+.panel { background: #16213e; border-radius: 12px; border: 1px solid #0f3460; padding: 20px; min-width: 280px; max-height: 520px; overflow-y: auto; }
+.panel h3 { color: #64ffda; margin-bottom: 12px; }
+.controls { margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+button { padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+button:hover { transform: translateY(-1px); }
+#btnNext { background: #64ffda; color: #1a1a2e; }
+#btnReset { background: #e94560; color: #fff; }
+#btnAuto { background: #533483; color: #fff; }
+#btnGenerate { background: #0f3460; color: #64ffda; border: 1px solid #64ffda; }
+.step-item { padding: 8px 10px; margin: 4px 0; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+.step-item.active { background: #0f3460; border-left: 3px solid #64ffda; }
+.step-item.done { opacity: 0.6; }
+.legend { display: flex; gap: 15px; margin: 10px 0; font-size: 13px; flex-wrap: wrap; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.info { font-size: 13px; color: #aaa; margin-top: 8px; text-align: center; max-width: 700px; }
+</style>
+</head>
+<body>
+<h1>Prim 算法可视化</h1>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#64ffda"></div>已加入MST的顶点</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div>候选边（最小堆中）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ffcc00"></div>当前选中的最小边</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#533483"></div>MST边</div>
+</div>
+<div class="controls">
+  <button id="btnNext">下一步</button>
+  <button id="btnAuto">自动播放</button>
+  <button id="btnReset">重置</button>
+  <button id="btnGenerate">随机图</button>
+</div>
+<div class="container">
+  <canvas id="canvas" width="520" height="500"></canvas>
+  <div class="panel">
+    <h3>执行步骤</h3>
+    <div id="steps"></div>
+  </div>
+</div>
+<p class="info">Prim 算法从任意顶点出发，每次选择连接已访问集合与未访问集合之间权重最小的边，直到所有顶点都被加入最小生成树（MST）。</p>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const stepsDiv = document.getElementById('steps');
+
+// Fix high-DPI blurry rendering
+const dpr = window.devicePixelRatio || 1;
+const CSS_WIDTH = 520, CSS_HEIGHT = 500;
+canvas.width = CSS_WIDTH * dpr;
+canvas.height = CSS_HEIGHT * dpr;
+canvas.style.width = CSS_WIDTH + 'px';
+canvas.style.height = CSS_HEIGHT + 'px';
+ctx.scale(dpr, dpr);
+
+let graph, state, autoTimer;
+
+function generateGraph() {
+  const n = 6;
+  const labels = ['A','B','C','D','E','F'];
+  const cx = CSS_WIDTH / 2, cy = CSS_HEIGHT / 2, r = 180;
+  const vertices = labels.map((l, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return { label: l, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  const edges = [];
+  const added = new Set();
+  const usedWeights = new Set();
+
+  function uniqueWeight() {
+    let w;
+    do { w = Math.floor(Math.random() * 15) + 1; } while (usedWeights.has(w));
+    usedWeights.add(w);
+    return w;
+  }
+
+  function addEdge(u, v) {
+    const key = Math.min(u,v) + '-' + Math.max(u,v);
+    if (!added.has(key)) { added.add(key); edges.push({u, v, w: uniqueWeight()}); }
+  }
+
+  for (let i = 0; i < n; i++) addEdge(i, (i+1) % n);
+  for (let i = 0; i < 3; i++) {
+    const u = Math.floor(Math.random() * n);
+    let v = Math.floor(Math.random() * n);
+    while (v === u) v = Math.floor(Math.random() * n);
+    addEdge(u, v);
+  }
+
+  return { vertices, edges };
+}
+
+function initState() {
+  state = { visited: new Set(), mstEdges: [], candidates: [], currentEdge: null, step: 0, steps: [], done: false };
+  state.visited.add(0);
+  state.steps.push(`起始：将顶点 ${graph.vertices[0].label} 加入 MST`);
+  addCandidates(0);
+}
+
+function addCandidates(v) {
+  for (const e of graph.edges) {
+    let other = -1;
+    if (e.u === v && !state.visited.has(e.v)) other = e.v;
+    if (e.v === v && !state.visited.has(e.u)) other = e.u;
+    if (other !== -1) state.candidates.push({...e, target: other});
+  }
+  state.candidates.sort((a, b) => a.w - b.w);
+}
+
+function nextStep() {
+  if (state.done) return;
+
+  while (state.candidates.length > 0 && state.visited.has(state.candidates[0].target)) {
+    state.candidates.shift();
+  }
+
+  if (state.candidates.length === 0) {
+    state.done = true;
+    const total = state.mstEdges.reduce((s, e) => s + e.w, 0);
+    state.steps.push(`完成！MST 总权重 = ${total}`);
+    state.currentEdge = null;
+    stopAuto();
+    render();
+    return;
+  }
+
+  const edge = state.candidates.shift();
+  state.currentEdge = edge;
+  state.steps.push(`选边 (${graph.vertices[edge.u].label}-${graph.vertices[edge.v].label}), 权重=${edge.w}, 加入顶点 ${graph.vertices[edge.target].label}`);
+
+  setTimeout(() => {
+    state.visited.add(edge.target);
+    state.mstEdges.push(edge);
+    state.currentEdge = null;
+    addCandidates(edge.target);
+    render();
+  }, 400);
+
+  render();
+}
+
+function render() {
+  ctx.clearRect(0, 0, CSS_WIDTH, CSS_HEIGHT);
+
+  const candidateKeys = new Set(state.candidates.map(e => edgeKey(e)));
+
+  for (const e of graph.edges) {
+    const key = edgeKey(e);
+    const isMST = state.mstEdges.some(m => edgeKey(m) === key);
+    const isCurrent = state.currentEdge && edgeKey(state.currentEdge) === key;
+    const isCandidate = candidateKeys.has(key);
+
+    ctx.beginPath();
+    ctx.moveTo(graph.vertices[e.u].x, graph.vertices[e.u].y);
+    ctx.lineTo(graph.vertices[e.v].x, graph.vertices[e.v].y);
+
+    if (isCurrent) { ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 4; }
+    else if (isMST) { ctx.strokeStyle = '#533483'; ctx.lineWidth = 4; }
+    else if (isCandidate) { ctx.strokeStyle = '#e94560'; ctx.lineWidth = 2; }
+    else { ctx.strokeStyle = '#334'; ctx.lineWidth = 1.5; }
+    ctx.stroke();
+
+    const mx = (graph.vertices[e.u].x + graph.vertices[e.v].x) / 2;
+    const my = (graph.vertices[e.u].y + graph.vertices[e.v].y) / 2;
+    ctx.fillStyle = isCurrent ? '#ffcc00' : isMST ? '#b388ff' : '#aaa';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.w, mx, my - 6);
+  }
+
+  for (let i = 0; i < graph.vertices.length; i++) {
+    const v = graph.vertices[i];
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, 22, 0, Math.PI * 2);
+    ctx.fillStyle = state.visited.has(i) ? '#64ffda' : '#16213e';
+    ctx.fill();
+    ctx.strokeStyle = state.visited.has(i) ? '#64ffda' : '#555';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = state.visited.has(i) ? '#1a1a2e' : '#eee';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.label, v.x, v.y);
+  }
+
+  renderSteps();
+}
+
+function renderSteps() {
+  stepsDiv.innerHTML = state.steps.map((s, i) =>
+    `<div class="step-item ${i === state.steps.length - 1 ? 'active' : 'done'}">${i + 1}. ${s}</div>`
+  ).join('');
+  stepsDiv.scrollTop = stepsDiv.scrollHeight;
+}
+
+function edgeKey(e) { return Math.min(e.u, e.v) + '-' + Math.max(e.u, e.v); }
+
+function reset() {
+  stopAuto();
+  initState();
+  render();
+}
+
+function stopAuto() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  document.getElementById('btnAuto').textContent = '自动播放';
+}
+
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnReset').onclick = reset;
+document.getElementById('btnGenerate').onclick = () => { graph = generateGraph(); reset(); };
+document.getElementById('btnAuto').onclick = () => {
+  if (autoTimer) { stopAuto(); return; }
+  document.getElementById('btnAuto').textContent = '暂停';
+  autoTimer = setInterval(() => { if (state.done) stopAuto(); else nextStep(); }, 1200);
+};
+
+graph = generateGraph();
+initState();
+render();
+</script>
+</body>
+</html>
