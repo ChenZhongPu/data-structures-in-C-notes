@@ -298,12 +298,19 @@ while Q 不为空：
 
 图的生成树（spanning tree）是一个包含图中所有顶点的树：生成树的边数为$|V|-1$，并且是一个连通子图。
 
-最小生成树常被缩写成MST。为了方便描述，我们假设：
+最小生成树常被缩写成MST；其中M好理解，重点是理解T和S。
+
+- **Tree**：它是无环的。
+- **Spanning**：它包含图中的所有顶点。
+- **Minimum**：它的总权重最小。
+
+为了方便描述，我们假设：
 
 - **图是无向的**。有向图更加复杂，Prim算法和Kruskal算法都不适用。
 - **图是连通的**。如果不连通，就没有MST。这种情况下，可以得到每个连通分量的MST，或者得到一个生成森林（spanning forest）。
 - **权重是唯一的**。如果权重不唯一，可能会有多棵MST。
-- **权重可以是0或负数**。
+
+8.4.2小节的作用不大，可以忽略。
 
 本节的重点是Prim算法和Kruskal算法。从步骤层面，这两个算法都很简单，这里主要从算法思想方面进行分析。
 
@@ -311,10 +318,126 @@ while Q 不为空：
 
 图的割（Cut）是指将图的顶点集合划分成两个不相交的子集所形成的边的集合。割的交叉边（crossing edge）是指连接其中一个集合中的顶点与另一个集合中的顶点的边。
 
-**引理**：给定带权图中的任意一个割，其所有交叉边中权重最小的那条边，必然属于该图的最小生成树（MST）。
 
-**证明**：设 $e$ 为权重最小的交叉边，并设 $T$ 为最小生成树（MST）。我们采用反证法进行证明。假设 $T$ 中不包含边 $e$。现在考虑将边 $e$ 添加到 $T$ 中所构成的图。这个图中会产生一个包含 $e$ 的环，并且该环必然包含至少一条其他的交叉边（假设记为 $f$）。由于 $e$ 是权重最小的交叉边，且所有边的权重各不相同，因此 $f$ 的权重必然高于 $e$。此时，我们可以通过删除边 $f$ 并加入边 $e$，得到一棵总权重严格更小的生成树，这与之前假设 $T$ 是最小生成树（即其具有最小性）相矛盾。
+>[!NOTE]
+> **引理**：给定带权图中的任意一个割，其所有交叉边中权重最小的那条边，必然属于该图的最小生成树（MST）。
+
+
+>[!NOTE]
+> **证明**：设 $e$ 为权重最小的交叉边，并设 $T$ 为最小生成树（MST）。我们采用反证法进行证明。假设 $T$ 中不包含边 $e$。现在考虑将边 $e$ 添加到 $T$ 中所构成的图。这个图中会产生一个包含 $e$ 的环，并且该环必然包含至少一条其他的交叉边（假设记为 $f$）。由于 $e$ 是权重最小的交叉边，且所有边的权重各不相同，因此 $f$ 的权重必然高于 $e$。此时，我们可以通过删除边 $f$ 并加入边 $e$，得到一棵总权重严格更小的生成树，这与之前假设 $T$ 是最小生成树（即其具有最小性）相矛盾。
 
 ![cut](cut.png)
 
-因此，MST的算法都是基于上述Cut Property来设计。具体的只是Cut的维护及找到最小交叉边的方式不同。
+因此，MST的 **[贪心](https://en.wikipedia.org/wiki/Greedy_algorithm)** 算法都是基于上述 Cut Property 来设计。具体的只是 Cut 的维护及找到最小交叉边的方式不同。
+
+## Prim算法的复杂度
+
+教材中提到，Prim算法的时间复杂度是 $O(|V|^2)$，这对于稠密图来说是合理的，但对于稀疏图来说效率较低。实际上，Prim算法可以通过使用优先队列（priority queue）来优化到 $O(|E| \log |V|)$，这对于稀疏图来说是更合适的。
+
+如果不考虑优化问题，Prim的实现非常简单，下面代码的时间复杂度是 $O(|V||E|)$。
+
+```c
+void graph_prim(const Graph *g, int start) {
+  if (g == NULL || start < 0 || start >= g->V) {
+    return;
+  }
+
+  bool *visited = calloc(g->V, sizeof(bool));
+  double total_weight = 0.0;
+  int edge_count = 0;
+
+  visited[start] = true;
+
+  printf("Prim MST from %d:\n", start);
+
+  while (edge_count < g->V - 1) {
+    int best_from = -1;
+    int best_to = -1;
+    double best_weight = DBL_MAX;
+
+    // 遍历所有的边
+    for (int v = 0; v < g->V; v++) {
+      if (!visited[v]) {
+        continue;
+      }
+
+      Edge *curr = g->adj[v].head;
+      while (curr != NULL) {
+        int w = curr->vertex;
+        // 要求w未访问，但是v已经访问。这里的“访问”是指已经加入MST了
+        if (!visited[w] && curr->weight < best_weight) {
+          best_from = v;
+          best_to = w;
+          best_weight = curr->weight;
+        }
+        curr = curr->next;
+      }
+    }
+
+    printf("%d - %d: %.2f\n", best_from, best_to, best_weight);
+    visited[best_to] = true;
+    total_weight += best_weight;
+    edge_count++;
+  }
+
+  if (edge_count == g->V - 1) {
+    printf("total weight: %.2f\n", total_weight);
+  }
+
+  free(visited);
+}
+```
+上述需要每次都检查所有的边。一个优化是（即教材中）维护一个`key[]`数组，表示从已经添加到MST中的顶点到未添加的顶点的最小边权重，这样每次只需要检查`key[]`数组来找到最小交叉边。
+
+- `key[v]`：当前把顶点 `v` 接入 MST 的最小边权重
+- `from[v]`：这条最小边来自哪个已加入 `MST` 的顶点，用来打印边
+
+```c
+// 不使用堆。每轮线性扫描 key 选点，整体复杂度为 O(V^2 + E)，即 O(V^2)。
+void graph_prim2(const Graph *g, int start) {
+  if (g == NULL || start < 0 || start >= g->V) {
+    return;
+  }
+
+  bool *visited = calloc(g->V, sizeof(bool));
+  double *key = malloc(sizeof(double) * g->V);
+  int *from = malloc(sizeof(int) * g->V);
+  double total_weight = 0.0;
+
+  for (int v = 0; v < g->V; v++) {
+    key[v] = DBL_MAX;
+    from[v] = -1;
+  }
+  key[start] = 0.0;
+
+  printf("Prim MST from %d:\n", start);
+
+  for (int i = 0; i < g->V; i++) {
+    int v = min_key_vertex(g, key, visited);
+    visited[v] = true;
+
+    if (v != start) {
+      printf("%d - %d: %.2f\n", from[v], v, key[v]);
+      total_weight += key[v];
+    }
+
+    Edge *curr = g->adj[v].head;
+    while (curr != NULL) {
+      int w = curr->vertex;
+      if (!visited[w] && curr->weight < key[w]) {
+        key[w] = curr->weight;
+        from[w] = v;
+      }
+      curr = curr->next;
+    }
+  }
+
+  printf("total weight: %.2f\n", total_weight);
+
+  free(visited);
+  free(key);
+  free(from);
+}
+```
+
+进一步，使用heap可以加速`min_key_vertex()`函数的实现。
