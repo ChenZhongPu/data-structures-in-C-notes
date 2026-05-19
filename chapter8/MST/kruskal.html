@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kruskal 算法可视化</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #1a1a2e; color: #eee; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+h1 { margin-bottom: 10px; color: #64ffda; }
+.container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
+canvas { background: #16213e; border-radius: 12px; border: 1px solid #0f3460; }
+.panel { background: #16213e; border-radius: 12px; border: 1px solid #0f3460; padding: 20px; min-width: 300px; max-height: 520px; overflow-y: auto; }
+.panel h3 { color: #64ffda; margin-bottom: 12px; }
+.controls { margin: 15px 0; display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+button { padding: 8px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; }
+button:hover { transform: translateY(-1px); }
+#btnNext { background: #64ffda; color: #1a1a2e; }
+#btnReset { background: #e94560; color: #fff; }
+#btnAuto { background: #533483; color: #fff; }
+#btnGenerate { background: #0f3460; color: #64ffda; border: 1px solid #64ffda; }
+.step-item { padding: 8px 10px; margin: 4px 0; border-radius: 6px; font-size: 13px; line-height: 1.4; }
+.step-item.active { background: #0f3460; border-left: 3px solid #64ffda; }
+.step-item.done { opacity: 0.6; }
+.step-item.rejected { opacity: 0.6; border-left: 3px solid #e94560; }
+.legend { display: flex; gap: 15px; margin: 10px 0; font-size: 13px; flex-wrap: wrap; justify-content: center; }
+.legend-item { display: flex; align-items: center; gap: 5px; }
+.legend-dot { width: 12px; height: 12px; border-radius: 50%; }
+.edge-list { margin-top: 10px; padding: 10px; background: #0f3460; border-radius: 8px; font-size: 12px; }
+.edge-list h4 { color: #64ffda; margin-bottom: 6px; }
+.edge-entry { padding: 3px 6px; margin: 2px 0; border-radius: 4px; display: flex; justify-content: space-between; }
+.edge-entry.used { background: rgba(83,52,131,0.3); color: #b388ff; }
+.edge-entry.rejected { background: rgba(233,69,96,0.15); color: #e94560; text-decoration: line-through; }
+.edge-entry.pending { color: #aaa; }
+.edge-entry.current { background: rgba(255,204,0,0.2); color: #ffcc00; }
+.info { font-size: 13px; color: #aaa; margin-top: 8px; text-align: center; max-width: 700px; }
+</style>
+</head>
+<body>
+<h1>Kruskal 算法可视化</h1>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#533483"></div>MST 边（已选入）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#ffcc00"></div>当前考察的边</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#e94560"></div>拒绝（会形成环）</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#64ffda"></div>已连通的顶点</div>
+</div>
+<div class="controls">
+  <button id="btnNext">下一步</button>
+  <button id="btnAuto">自动播放</button>
+  <button id="btnReset">重置</button>
+  <button id="btnGenerate">随机图</button>
+</div>
+<div class="container">
+  <canvas id="canvas" width="520" height="500"></canvas>
+  <div class="panel">
+    <h3>执行步骤</h3>
+    <div id="steps"></div>
+    <div class="edge-list">
+      <h4>边按权重排序</h4>
+      <div id="edgeList"></div>
+    </div>
+  </div>
+</div>
+<p class="info">Kruskal 算法将所有边按权重从小到大排序，依次考察每条边：若加入该边不会形成环（即两端点不在同一连通分量），则将其加入 MST；否则跳过。使用并查集（Union-Find）高效判断连通性。</p>
+
+<script>
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const stepsDiv = document.getElementById('steps');
+const edgeListDiv = document.getElementById('edgeList');
+
+const dpr = window.devicePixelRatio || 1;
+const CSS_WIDTH = 520, CSS_HEIGHT = 500;
+canvas.width = CSS_WIDTH * dpr;
+canvas.height = CSS_HEIGHT * dpr;
+canvas.style.width = CSS_WIDTH + 'px';
+canvas.style.height = CSS_HEIGHT + 'px';
+ctx.scale(dpr, dpr);
+
+let graph, state, autoTimer;
+
+// Union-Find
+function makeUF(n) {
+  const parent = Array.from({length: n}, (_, i) => i);
+  const rank = new Array(n).fill(0);
+  function find(x) { return parent[x] === x ? x : (parent[x] = find(parent[x])); }
+  function union(a, b) {
+    const ra = find(a), rb = find(b);
+    if (ra === rb) return false;
+    if (rank[ra] < rank[rb]) parent[ra] = rb;
+    else if (rank[ra] > rank[rb]) parent[rb] = ra;
+    else { parent[rb] = ra; rank[ra]++; }
+    return true;
+  }
+  function connected(a, b) { return find(a) === find(b); }
+  return { find, union, connected };
+}
+
+function generateGraph() {
+  const n = 6;
+  const labels = ['A','B','C','D','E','F'];
+  const cx = CSS_WIDTH / 2, cy = CSS_HEIGHT / 2, r = 180;
+  const vertices = labels.map((l, i) => {
+    const angle = (i / n) * Math.PI * 2 - Math.PI / 2;
+    return { label: l, x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  });
+
+  const edges = [];
+  const added = new Set();
+  const usedWeights = new Set();
+
+  function uniqueWeight() {
+    let w;
+    do { w = Math.floor(Math.random() * 15) + 1; } while (usedWeights.has(w));
+    usedWeights.add(w);
+    return w;
+  }
+
+  function addEdge(u, v) {
+    const key = Math.min(u,v) + '-' + Math.max(u,v);
+    if (!added.has(key)) { added.add(key); edges.push({u, v, w: uniqueWeight()}); }
+  }
+
+  for (let i = 0; i < n; i++) addEdge(i, (i+1) % n);
+  for (let i = 0; i < 4; i++) {
+    const u = Math.floor(Math.random() * n);
+    let v = Math.floor(Math.random() * n);
+    while (v === u) v = Math.floor(Math.random() * n);
+    addEdge(u, v);
+  }
+
+  edges.sort((a, b) => a.w - b.w);
+  return { vertices, edges };
+}
+
+function initState() {
+  state = {
+    uf: makeUF(graph.vertices.length),
+    mstEdges: [],
+    rejectedEdges: [],
+    currentEdge: null,
+    edgeIndex: 0,
+    steps: [],
+    edgeStatus: new Array(graph.edges.length).fill('pending'),
+    done: false
+  };
+  state.steps.push('初始化：所有边按权重排序，每个顶点各自为一个连通分量');
+}
+
+function nextStep() {
+  if (state.done) return;
+
+  if (state.currentEdge !== null) {
+    const idx = state.edgeIndex - 1;
+    const e = state.currentEdge;
+    if (state.uf.connected(e.u, e.v)) {
+      state.rejectedEdges.push(e);
+      state.edgeStatus[idx] = 'rejected';
+      state.steps.push(`拒绝边 (${graph.vertices[e.u].label}-${graph.vertices[e.v].label}), 权重=${e.w} — 会形成环`);
+    } else {
+      state.uf.union(e.u, e.v);
+      state.mstEdges.push(e);
+      state.edgeStatus[idx] = 'used';
+      state.steps.push(`选入边 (${graph.vertices[e.u].label}-${graph.vertices[e.v].label}), 权重=${e.w} — 连通两个分量`);
+    }
+    state.currentEdge = null;
+
+    if (state.mstEdges.length === graph.vertices.length - 1) {
+      state.done = true;
+      const total = state.mstEdges.reduce((s, e) => s + e.w, 0);
+      state.steps.push(`完成！MST 总权重 = ${total}`);
+      stopAuto();
+    }
+    render();
+    return;
+  }
+
+  if (state.edgeIndex >= graph.edges.length) {
+    state.done = true;
+    const total = state.mstEdges.reduce((s, e) => s + e.w, 0);
+    state.steps.push(`完成！MST 总权重 = ${total}`);
+    stopAuto();
+    render();
+    return;
+  }
+
+  const e = graph.edges[state.edgeIndex];
+  state.currentEdge = e;
+  state.edgeStatus[state.edgeIndex] = 'current';
+  state.edgeIndex++;
+  state.steps.push(`考察边 (${graph.vertices[e.u].label}-${graph.vertices[e.v].label}), 权重=${e.w}`);
+  render();
+}
+
+function render() {
+  ctx.clearRect(0, 0, CSS_WIDTH, CSS_HEIGHT);
+
+  const mstKeys = new Set(state.mstEdges.map(e => edgeKey(e)));
+  const rejKeys = new Set(state.rejectedEdges.map(e => edgeKey(e)));
+  const curKey = state.currentEdge ? edgeKey(state.currentEdge) : null;
+
+  for (const e of graph.edges) {
+    const key = edgeKey(e);
+    ctx.beginPath();
+    ctx.moveTo(graph.vertices[e.u].x, graph.vertices[e.u].y);
+    ctx.lineTo(graph.vertices[e.v].x, graph.vertices[e.v].y);
+
+    if (key === curKey) { ctx.strokeStyle = '#ffcc00'; ctx.lineWidth = 4; }
+    else if (mstKeys.has(key)) { ctx.strokeStyle = '#533483'; ctx.lineWidth = 4; }
+    else if (rejKeys.has(key)) { ctx.strokeStyle = '#e9456044'; ctx.lineWidth = 1.5; ctx.setLineDash([5,5]); }
+    else { ctx.strokeStyle = '#334'; ctx.lineWidth = 1.5; }
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    const mx = (graph.vertices[e.u].x + graph.vertices[e.v].x) / 2;
+    const my = (graph.vertices[e.u].y + graph.vertices[e.v].y) / 2;
+    ctx.fillStyle = key === curKey ? '#ffcc00' : mstKeys.has(key) ? '#b388ff' : '#aaa';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(e.w, mx, my - 6);
+  }
+
+  const connectedVerts = new Set();
+  for (const e of state.mstEdges) { connectedVerts.add(e.u); connectedVerts.add(e.v); }
+
+  for (let i = 0; i < graph.vertices.length; i++) {
+    const v = graph.vertices[i];
+    ctx.beginPath();
+    ctx.arc(v.x, v.y, 22, 0, Math.PI * 2);
+    const inMST = connectedVerts.has(i);
+    ctx.fillStyle = inMST ? '#64ffda' : '#16213e';
+    ctx.fill();
+    ctx.strokeStyle = inMST ? '#64ffda' : '#555';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.fillStyle = inMST ? '#1a1a2e' : '#eee';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(v.label, v.x, v.y);
+  }
+
+  renderSteps();
+  renderEdgeList();
+}
+
+function renderSteps() {
+  stepsDiv.innerHTML = state.steps.map((s, i) => {
+    let cls = i === state.steps.length - 1 ? 'active' : 'done';
+    if (s.startsWith('拒绝')) cls = 'rejected';
+    return `<div class="step-item ${cls}">${i + 1}. ${s}</div>`;
+  }).join('');
+  stepsDiv.scrollTop = stepsDiv.scrollHeight;
+}
+
+function renderEdgeList() {
+  edgeListDiv.innerHTML = graph.edges.map((e, i) => {
+    const status = state.edgeStatus[i];
+    const label = `${graph.vertices[e.u].label}-${graph.vertices[e.v].label}`;
+    return `<div class="edge-entry ${status}"><span>${label}</span><span>w=${e.w}</span></div>`;
+  }).join('');
+}
+
+function edgeKey(e) { return Math.min(e.u, e.v) + '-' + Math.max(e.u, e.v); }
+
+function reset() {
+  stopAuto();
+  initState();
+  render();
+}
+
+function stopAuto() {
+  if (autoTimer) { clearInterval(autoTimer); autoTimer = null; }
+  document.getElementById('btnAuto').textContent = '自动播放';
+}
+
+document.getElementById('btnNext').onclick = nextStep;
+document.getElementById('btnReset').onclick = reset;
+document.getElementById('btnGenerate').onclick = () => { graph = generateGraph(); reset(); };
+document.getElementById('btnAuto').onclick = () => {
+  if (autoTimer) { stopAuto(); return; }
+  document.getElementById('btnAuto').textContent = '暂停';
+  autoTimer = setInterval(() => { if (state.done) stopAuto(); else nextStep(); }, 1000);
+};
+
+graph = generateGraph();
+initState();
+render();
+</script>
+</body>
+</html>
