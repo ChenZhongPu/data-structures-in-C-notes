@@ -1,0 +1,990 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Floyd 算法矩阵动画</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f6f7fb;
+    color: #1f2937;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  .shell {
+    width: min(1420px, 100%);
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0;
+    color: #0f172a;
+    font-size: 24px;
+    line-height: 1.2;
+  }
+
+  .meta {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .phase-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 96px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(520px, 0.9fr) minmax(620px, 1.1fr);
+    gap: 18px;
+    align-items: start;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+  }
+
+  .graph-panel,
+  .matrix-panel {
+    padding: 16px;
+  }
+
+  .graph-wrap {
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: linear-gradient(#fff, #f8fafc);
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 380px;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  button {
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 6px;
+    background: #1d4ed8;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) {
+    background: #1e40af;
+  }
+
+  button.secondary {
+    background: #475569;
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: #334155;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    background: #cbd5e1;
+    color: #64748b;
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  select {
+    height: 36px;
+    min-width: 122px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  .step-range {
+    flex: 1 1 220px;
+    min-width: 180px;
+    accent-color: #1d4ed8;
+  }
+
+  .counter {
+    width: 104px;
+    color: #475569;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-top: 12px;
+    color: #475569;
+    font-size: 13px;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 22px;
+    height: 4px;
+    border-radius: 999px;
+    background: #94a3b8;
+  }
+
+  .swatch.via { background: #2563eb; }
+  .swatch.target { background: #f59e0b; }
+  .swatch.update { background: #059669; }
+
+  .section + .section {
+    margin-top: 16px;
+  }
+
+  h2 {
+    margin: 0 0 10px;
+    color: #0f172a;
+    font-size: 16px;
+  }
+
+  .description {
+    min-height: 112px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  .formula,
+  .path-line {
+    margin-top: 8px;
+    color: #334155;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.45;
+  }
+
+  .matrix-stack {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .matrix-card {
+    min-width: 0;
+  }
+
+  .hint {
+    margin: -5px 0 8px;
+    color: #64748b;
+    font-size: 12.5px;
+    line-height: 1.4;
+  }
+
+  .matrix-wrap {
+    overflow-x: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  table.matrix {
+    width: 100%;
+    min-width: 390px;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .matrix th,
+  .matrix td {
+    width: 46px;
+    height: 38px;
+    border: 1px solid #e2e8f0;
+    text-align: center;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .matrix th {
+    background: #f8fafc;
+    color: #475569;
+  }
+
+  .matrix td {
+    background: #fff;
+    color: #0f172a;
+    transition: background 0.15s, color 0.15s, outline 0.15s;
+  }
+
+  .matrix td.k-row,
+  .matrix td.k-col {
+    background: #eef2ff;
+  }
+
+  .matrix td.via-left,
+  .matrix td.via-right {
+    background: #dbeafe;
+    color: #1d4ed8;
+    outline: 2px solid #60a5fa;
+    outline-offset: -2px;
+  }
+
+  .matrix td.target {
+    background: #fef3c7;
+    color: #92400e;
+    outline: 2px solid #f59e0b;
+    outline-offset: -2px;
+  }
+
+  .matrix td.updated {
+    background: #d1fae5;
+    color: #047857;
+    outline: 3px solid #10b981;
+    outline-offset: -3px;
+  }
+
+  .matrix td.unreachable {
+    color: #94a3b8;
+  }
+
+  .log {
+    max-height: 180px;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #0f172a;
+    padding: 10px;
+    color: #dbeafe;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .log-line {
+    white-space: pre-wrap;
+  }
+
+  .log-line.active {
+    color: #fbbf24;
+  }
+
+  .edge {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 3;
+    marker-end: url(#arrow-default);
+    transition: stroke 0.2s, stroke-width 0.2s, opacity 0.2s;
+  }
+
+  .edge.via {
+    stroke: #2563eb;
+    stroke-width: 5;
+    marker-end: url(#arrow-via);
+  }
+
+  .edge.direct-target {
+    stroke: #f59e0b;
+    stroke-width: 5;
+    stroke-dasharray: 8 6;
+    marker-end: url(#arrow-target);
+  }
+
+  .edge.updated-path {
+    stroke: #059669;
+    stroke-width: 6;
+    marker-end: url(#arrow-update);
+  }
+
+  .edge-label-bg {
+    fill: #fff;
+    stroke: #e2e8f0;
+    stroke-width: 1;
+  }
+
+  .edge-label {
+    fill: #334155;
+    font-size: 22px;
+    font-weight: 800;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+
+  .node circle {
+    fill: #fff;
+    stroke: #334155;
+    stroke-width: 3;
+    transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
+  }
+
+  .node text {
+    fill: #0f172a;
+    font-size: 30px;
+    font-weight: 800;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+
+  .node.k circle {
+    fill: #dbeafe;
+    stroke: #2563eb;
+    stroke-width: 5;
+  }
+
+  .node.i circle {
+    fill: #fef3c7;
+    stroke: #f59e0b;
+    stroke-width: 5;
+  }
+
+  .node.j circle {
+    fill: #dcfce7;
+    stroke: #059669;
+    stroke-width: 5;
+  }
+
+  @media (max-width: 1120px) {
+    .layout,
+    .matrix-stack {
+      grid-template-columns: 1fr;
+    }
+
+    header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 680px) {
+    body {
+      padding: 16px;
+    }
+
+    .matrix th,
+    .matrix td {
+      width: 42px;
+      height: 34px;
+      font-size: 12px;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Floyd 算法矩阵动画</h1>
+      <p class="meta">外层固定中转点 k，逐个检查是否用 i -> k -> j 改进 distTo[i][j]，并同步维护 edgeTo 矩阵。示例为 4 个顶点且两两可达。</p>
+    </div>
+    <div class="phase-badge" id="phaseBadge">k = -</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel graph-panel">
+      <div class="graph-wrap">
+        <svg id="graph" viewBox="0 0 980 560" role="img" aria-label="Floyd directed weighted graph animation">
+          <defs>
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#cbd5e1"></path>
+            </marker>
+            <marker id="arrow-via" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"></path>
+            </marker>
+            <marker id="arrow-target" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"></path>
+            </marker>
+            <marker id="arrow-update" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#059669"></path>
+            </marker>
+          </defs>
+          <g id="edges"></g>
+          <g id="labels"></g>
+          <g id="nodes"></g>
+        </svg>
+      </div>
+
+      <div class="controls">
+        <label for="jumpSelect">跳转
+          <select id="jumpSelect" aria-label="跳到某轮 k 检查后的结果"></select>
+        </label>
+        <button class="secondary" id="prevBtn" type="button">上一步</button>
+        <button id="playBtn" type="button">播放</button>
+        <button id="nextBtn" type="button">下一步</button>
+        <button class="secondary" id="resetBtn" type="button">重置</button>
+        <input class="step-range" id="stepRange" type="range" min="0" value="0" />
+        <div class="counter" id="counter">1 / 1</div>
+      </div>
+
+      <div class="legend" aria-hidden="true">
+        <span class="legend-item"><span class="swatch via"></span>当前 i -> k / k -> j 路径</span>
+        <span class="legend-item"><span class="swatch target"></span>正在比较的 i -> j</span>
+        <span class="legend-item"><span class="swatch update"></span>刚更新的最短路径</span>
+      </div>
+    </section>
+
+    <section class="panel matrix-panel">
+      <section class="section">
+        <h2>当前步骤</h2>
+        <div class="description" id="description"></div>
+        <div class="formula" id="formula"></div>
+        <div class="path-line" id="pathLine"></div>
+      </section>
+
+      <section class="section matrix-stack">
+        <div class="matrix-card">
+          <h2>distTo 矩阵</h2>
+          <p class="hint">distTo[i][j] 表示当前从 i 到 j 的最短距离。</p>
+          <div class="matrix-wrap" id="distMatrix"></div>
+        </div>
+
+        <div class="matrix-card">
+          <h2>edgeTo 矩阵</h2>
+          <p class="hint">edgeTo[i][j] 保存当前从 i 到 j 最短路径的最后一条边；- 表示不可达或 i == j。</p>
+          <div class="matrix-wrap" id="edgeToMatrix"></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <h2>执行记录</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </section>
+  </main>
+</div>
+
+<script>
+const INF = Infinity;
+const nodeRadius = 43;
+const vertices = [
+  { id: 0, x: 170, y: 280 },
+  { id: 1, x: 410, y: 120 },
+  { id: 2, x: 650, y: 280 },
+  { id: 3, x: 410, y: 440 }
+];
+
+const edges = [
+  { id: "0-1", from: 0, to: 1, weight: 3, labelDx: -24, labelDy: -18 },
+  { id: "1-2", from: 1, to: 2, weight: 2, labelDx: 24, labelDy: -18 },
+  { id: "2-3", from: 2, to: 3, weight: 1, labelDx: 24, labelDy: 18 },
+  { id: "3-0", from: 3, to: 0, weight: 4, labelDx: -24, labelDy: 18 },
+  { id: "0-2", from: 0, to: 2, weight: 10, labelDx: 0, labelDy: -30 },
+  { id: "1-3", from: 1, to: 3, weight: 6, labelDx: 34, labelDy: 0 }
+];
+
+const n = vertices.length;
+const edgeByPair = new Map(edges.map((edge) => [`${edge.from}-${edge.to}`, edge]));
+const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
+const edgesLayer = document.getElementById("edges");
+const labelsLayer = document.getElementById("labels");
+const nodesLayer = document.getElementById("nodes");
+const phaseBadge = document.getElementById("phaseBadge");
+const descriptionEl = document.getElementById("description");
+const formulaEl = document.getElementById("formula");
+const pathLineEl = document.getElementById("pathLine");
+const distMatrixEl = document.getElementById("distMatrix");
+const edgeToMatrixEl = document.getElementById("edgeToMatrix");
+const logEl = document.getElementById("log");
+const jumpSelect = document.getElementById("jumpSelect");
+const prevBtn = document.getElementById("prevBtn");
+const playBtn = document.getElementById("playBtn");
+const nextBtn = document.getElementById("nextBtn");
+const resetBtn = document.getElementById("resetBtn");
+const stepRange = document.getElementById("stepRange");
+const counterEl = document.getElementById("counter");
+
+let steps = buildFloydSteps();
+let stepIndex = 0;
+let timer = null;
+
+stepRange.max = String(steps.length - 1);
+initJumpSelect();
+
+function buildFloydSteps() {
+  const dist = Array.from({ length: n }, () => Array(n).fill(INF));
+  const edgeTo = Array.from({ length: n }, () => Array(n).fill(null));
+  const result = [];
+  const log = [];
+
+  for (let i = 0; i < n; i++) {
+    dist[i][i] = 0;
+  }
+  for (const edge of edges) {
+    dist[edge.from][edge.to] = edge.weight;
+    edgeTo[edge.from][edge.to] = edge.id;
+  }
+
+  pushStep("初始化", "用邻接矩阵初始化 distTo：对角线为 0，有边的位置填边权，其余为无穷大；edgeTo 矩阵在有直接边的位置保存这条边。", null);
+
+  for (let k = 0; k < n; k++) {
+    log.push(`开始第 ${k} 轮：允许顶点 ${k} 作为新的中转点。`);
+    const startDescription = k === 0
+      ? "本轮仍会完整执行所有 i 和 j 的检查；为了避免一开始出现大量无变化步骤，动画直接跳到 k = 0 的完成结果。"
+      : `本轮检查所有 i 和 j，判断从 i 到 j 是否经过 ${k} 会更短。第 ${k} 轮结束后，distTo 会包含只使用 0..${k} 作为中转点的最短距离。`;
+    pushStep(
+      `固定中转点 k = ${k}`,
+      startDescription,
+      { k, phase: "start" }
+    );
+
+    const emitDetailedChecks = k !== 0;
+    let updateCount = 0;
+    let reachableChecks = 0;
+
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        const before = dist[i][j];
+        const left = dist[i][k];
+        const right = dist[k][j];
+        const canUseK = left !== INF && right !== INF;
+        const candidate = canUseK ? left + right : INF;
+        const updated = candidate < before;
+        let description;
+
+        if (!canUseK) {
+          description = `检查 distTo[${i}][${j}]：因为 distTo[${i}][${k}] 或 distTo[${k}][${j}] 不可达，所以不能构造 i -> k -> j。`;
+          if (emitDetailedChecks) {
+            log.push(`跳过 (${i},${j})：${formatDistance(left)} + ${formatDistance(right)} 不可达。`);
+          }
+        } else if (updated) {
+          reachableChecks++;
+          updateCount++;
+          dist[i][j] = candidate;
+          edgeTo[i][j] = edgeTo[k][j];
+          description = `检查 distTo[${i}][${j}]：经过 ${k} 的路径更短，所以更新 distTo[${i}][${j}]，并令 edgeTo[${i}][${j}] = edgeTo[${k}][${j}]。`;
+          if (emitDetailedChecks) {
+            log.push(`更新 (${i},${j})：${formatDistance(before)} -> ${candidate}，edgeTo[${i}][${j}] = ${formatEdgeToValue(edgeTo[i][j])}。`);
+          }
+        } else {
+          if (canUseK) reachableChecks++;
+          description = `检查 distTo[${i}][${j}]：经过 ${k} 的距离没有更短，distTo 和 edgeTo 保持不变。`;
+          if (emitDetailedChecks) {
+            log.push(`保持 (${i},${j})：当前 ${formatDistance(before)}，候选 ${formatDistance(candidate)}。`);
+          }
+        }
+
+        if (emitDetailedChecks) {
+          pushStep(
+            `检查 i = ${i}, k = ${k}, j = ${j}`,
+            description,
+            {
+              k,
+              i,
+              j,
+              before,
+              left,
+              right,
+              candidate,
+              updated,
+              canUseK,
+              phase: "check"
+            }
+          );
+        }
+      }
+    }
+
+    log.push(`完成第 ${k} 轮：可构造 i -> ${k} -> j 的检查 ${reachableChecks} 个，更新 ${updateCount} 个单元格。`);
+    pushStep(
+      `k = ${k} 检查完成`,
+      `已完成所有以 ${k} 作为新中转点的检查。本轮可构造的候选路径有 ${reachableChecks} 个，实际更新 ${updateCount} 个 distTo / edgeTo 单元格。`,
+      {
+        k,
+        phase: "summary",
+        summaryK: k,
+        updateCount,
+        reachableChecks
+      }
+    );
+  }
+
+  pushStep("完成", "所有中转点都已经检查完毕。distTo 矩阵给出任意两点之间的最短距离；edgeTo 矩阵像 Dijkstra 的 edgeTo 一样保存最短路径的最后一条边。", null);
+  return result;
+
+  function pushStep(title, description, extra) {
+    result.push({
+      title,
+      description,
+      dist: cloneMatrix(dist),
+      edgeTo: cloneMatrix(edgeTo),
+      log: log.slice(),
+      k: extra && extra.k !== undefined ? extra.k : null,
+      i: extra && extra.i !== undefined ? extra.i : null,
+      j: extra && extra.j !== undefined ? extra.j : null,
+      before: extra && extra.before !== undefined ? extra.before : null,
+      left: extra && extra.left !== undefined ? extra.left : null,
+      right: extra && extra.right !== undefined ? extra.right : null,
+      candidate: extra && extra.candidate !== undefined ? extra.candidate : null,
+      updated: extra ? Boolean(extra.updated) : false,
+      canUseK: extra ? Boolean(extra.canUseK) : false,
+      phase: extra && extra.phase ? extra.phase : "plain",
+      summaryK: extra && extra.summaryK !== undefined ? extra.summaryK : null,
+      updateCount: extra && extra.updateCount !== undefined ? extra.updateCount : null,
+      reachableChecks: extra && extra.reachableChecks !== undefined ? extra.reachableChecks : null
+    });
+  }
+}
+
+function cloneMatrix(matrix) {
+  return matrix.map((row) => row.slice());
+}
+
+function renderGraphBase() {
+  edgesLayer.innerHTML = "";
+  labelsLayer.innerHTML = "";
+  nodesLayer.innerHTML = "";
+
+  for (const edge of edges) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("id", `edge-${edge.id}`);
+    path.setAttribute("class", "edge");
+    path.setAttribute("d", edgePath(edge));
+    edgesLayer.appendChild(path);
+
+    const label = labelPosition(edge);
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("id", `label-${edge.id}`);
+    group.innerHTML = `
+      <rect class="edge-label-bg" x="${label.x - 17}" y="${label.y - 17}" width="34" height="34" rx="17"></rect>
+      <text class="edge-label" x="${label.x}" y="${label.y}">${edge.weight}</text>
+    `;
+    labelsLayer.appendChild(group);
+  }
+
+  for (const vertex of vertices) {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("id", `node-${vertex.id}`);
+    group.setAttribute("class", "node");
+    group.innerHTML = `
+      <circle cx="${vertex.x}" cy="${vertex.y}" r="${nodeRadius}"></circle>
+      <text x="${vertex.x}" y="${vertex.y + 1}">${vertex.id}</text>
+    `;
+    nodesLayer.appendChild(group);
+  }
+}
+
+function renderStep(index) {
+  const step = steps[index];
+  const highlight = buildGraphHighlight(step);
+
+  for (const edge of edges) {
+    const path = document.getElementById(`edge-${edge.id}`);
+    const classes = ["edge"];
+    if (highlight.updatedEdges.has(edge.id)) classes.push("updated-path");
+    else if (highlight.targetEdges.has(edge.id)) classes.push("direct-target");
+    else if (highlight.viaEdges.has(edge.id)) classes.push("via");
+    path.setAttribute("class", classes.join(" "));
+  }
+
+  for (const vertex of vertices) {
+    const node = document.getElementById(`node-${vertex.id}`);
+    const classes = ["node"];
+    if (step.k === vertex.id) classes.push("k");
+    if (step.i === vertex.id) classes.push("i");
+    if (step.j === vertex.id) classes.push("j");
+    node.setAttribute("class", classes.join(" "));
+  }
+
+  phaseBadge.textContent = step.k === null ? "k = -" : `k = ${step.k}`;
+  descriptionEl.innerHTML = `<strong>${step.title}</strong><br>${step.description}`;
+  formulaEl.textContent = formatFormula(step);
+  pathLineEl.textContent = formatPathLine(step);
+  renderMatrix(distMatrixEl, step.dist, step, "dist");
+  renderMatrix(edgeToMatrixEl, step.edgeTo, step, "edgeTo");
+  renderLog(step);
+  renderControls();
+}
+
+function buildGraphHighlight(step) {
+  const viaEdges = new Set();
+  const targetEdges = new Set();
+  const updatedEdges = new Set();
+
+  if (step.i === null || step.j === null || step.k === null) {
+    return { viaEdges, targetEdges, updatedEdges };
+  }
+
+  addPathEdges(viaEdges, reconstructPath(step.i, step.k, step.dist, step.edgeTo));
+  addPathEdges(viaEdges, reconstructPath(step.k, step.j, step.dist, step.edgeTo));
+  addPathEdges(targetEdges, reconstructPath(step.i, step.j, step.dist, step.edgeTo));
+
+  if (step.updated) {
+    addPathEdges(updatedEdges, reconstructPath(step.i, step.j, step.dist, step.edgeTo));
+  }
+
+  return { viaEdges, targetEdges, updatedEdges };
+}
+
+function addPathEdges(set, vertexPath) {
+  for (let index = 0; index < vertexPath.length - 1; index++) {
+    const edge = edgeByPair.get(`${vertexPath[index]}-${vertexPath[index + 1]}`);
+    if (edge) set.add(edge.id);
+  }
+}
+
+function renderMatrix(container, matrix, step, kind) {
+  let html = "<table class=\"matrix\"><thead><tr><th></th>";
+  for (let col = 0; col < n; col++) {
+    html += `<th>${col}</th>`;
+  }
+  html += "</tr></thead><tbody>";
+
+  for (let row = 0; row < n; row++) {
+    html += `<tr><th>${row}</th>`;
+    for (let col = 0; col < n; col++) {
+      const classes = matrixCellClasses(row, col, step, kind, matrix[row][col]);
+      html += `<td class="${classes}">${formatMatrixValue(matrix[row][col], kind)}</td>`;
+    }
+    html += "</tr>";
+  }
+
+  html += "</tbody></table>";
+  container.innerHTML = html;
+}
+
+function matrixCellClasses(row, col, step, kind, value) {
+  const classes = [];
+  if (value === INF) classes.push("unreachable");
+  if (step.k !== null && row === step.k) classes.push("k-row");
+  if (step.k !== null && col === step.k) classes.push("k-col");
+
+  if (step.i !== null && step.j !== null && step.k !== null) {
+    if (row === step.i && col === step.k) classes.push("via-left");
+    if (row === step.k && col === step.j) classes.push("via-right");
+    if (row === step.i && col === step.j) {
+      classes.push(step.updated ? "updated" : "target");
+    }
+  }
+
+  if (kind === "edgeTo" && value === null) classes.push("unreachable");
+  return classes.join(" ");
+}
+
+function renderLog(step) {
+  const lines = step.log.length ? step.log : ["等待开始。"];
+  const visible = lines.slice(-18);
+  logEl.innerHTML = visible.map((line, index) => {
+    const active = index === visible.length - 1 ? " active" : "";
+    return `<div class="log-line${active}">${line}</div>`;
+  }).join("");
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderControls() {
+  prevBtn.disabled = stepIndex === 0;
+  nextBtn.disabled = stepIndex === steps.length - 1;
+  stepRange.value = String(stepIndex);
+  counterEl.textContent = `${stepIndex + 1} / ${steps.length}`;
+  playBtn.textContent = timer ? "暂停" : "播放";
+  const hasJumpOption = Array.from(jumpSelect.options).some((option) => option.value === String(stepIndex));
+  jumpSelect.value = hasJumpOption ? String(stepIndex) : "";
+}
+
+function initJumpSelect() {
+  const options = ['<option value="">轮次结果</option>'];
+  steps.forEach((step, index) => {
+    if (step.summaryK !== null) {
+      options.push(`<option value="${index}">k=${step.summaryK} 完成</option>`);
+    }
+  });
+  jumpSelect.innerHTML = options.join("");
+}
+
+function formatFormula(step) {
+  if (step.phase === "summary") {
+    return `k = ${step.summaryK} 检查完成：可构造候选 ${step.reachableChecks} 个，更新 ${step.updateCount} 个单元格。`;
+  }
+
+  if (step.i === null || step.j === null || step.k === null) {
+    return "Floyd 更新规则：distTo[i][j] = min(distTo[i][j], distTo[i][k] + distTo[k][j])";
+  }
+
+  return `distTo[${step.i}][${step.j}] ? distTo[${step.i}][${step.k}] + distTo[${step.k}][${step.j}] = ${formatDistance(step.before)} ? ${formatDistance(step.left)} + ${formatDistance(step.right)} = ${formatDistance(step.candidate)}`;
+}
+
+function formatPathLine(step) {
+  if (step.i === null || step.j === null) {
+    return "edgeTo[i][j] 保存从 i 到 j 当前最短路径的最后一条边。";
+  }
+
+  const currentPath = reconstructPath(step.i, step.j, step.dist, step.edgeTo);
+  const route = currentPath.length ? currentPath.join(" -> ") : "不可达";
+  return `当前已知路径 ${step.i} -> ${step.j}: ${route}；edgeTo[${step.i}][${step.j}] = ${formatEdgeToValue(step.edgeTo[step.i][step.j])}`;
+}
+
+function formatMatrixValue(value, kind) {
+  if (kind === "edgeTo") {
+    return formatEdgeToValue(value);
+  }
+  return formatDistance(value);
+}
+
+function formatDistance(value) {
+  return value === INF ? "∞" : String(value);
+}
+
+function formatEdgeToValue(edgeId) {
+  if (!edgeId) return "-";
+  const edge = edgeById.get(edgeId);
+  return edge ? `${edge.from}->${edge.to}` : "-";
+}
+
+function reconstructPath(from, to, dist, edgeTo) {
+  if (dist[from][to] === INF) return [];
+  if (from === to) return [from];
+
+  const lastEdgeId = edgeTo[from][to];
+  if (!lastEdgeId) return [];
+  const lastEdge = edgeById.get(lastEdgeId);
+  if (!lastEdge) return [];
+  const prefix = reconstructPath(from, lastEdge.from, dist, edgeTo);
+  if (!prefix.length) return [];
+  return prefix.concat(lastEdge.to);
+}
+
+function edgePath(edge) {
+  const from = vertices[edge.from];
+  const to = vertices[edge.to];
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const ux = dx / length;
+  const uy = dy / length;
+  const startX = from.x + ux * nodeRadius;
+  const startY = from.y + uy * nodeRadius;
+  const endX = to.x - ux * (nodeRadius + 8);
+  const endY = to.y - uy * (nodeRadius + 8);
+  return `M ${startX} ${startY} L ${endX} ${endY}`;
+}
+
+function labelPosition(edge) {
+  const from = vertices[edge.from];
+  const to = vertices[edge.to];
+  return {
+    x: (from.x + to.x) / 2 + edge.labelDx,
+    y: (from.y + to.y) / 2 + edge.labelDy
+  };
+}
+
+function go(delta) {
+  stepIndex = Math.max(0, Math.min(steps.length - 1, stepIndex + delta));
+  renderStep(stepIndex);
+}
+
+function stopPlayback() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+    renderControls();
+  }
+}
+
+function togglePlayback() {
+  if (timer) {
+    stopPlayback();
+    return;
+  }
+
+  timer = setInterval(() => {
+    if (stepIndex >= steps.length - 1) {
+      stopPlayback();
+      return;
+    }
+    go(1);
+  }, 260);
+  renderControls();
+}
+
+prevBtn.addEventListener("click", () => {
+  stopPlayback();
+  go(-1);
+});
+
+nextBtn.addEventListener("click", () => {
+  stopPlayback();
+  go(1);
+});
+
+resetBtn.addEventListener("click", () => {
+  stopPlayback();
+  stepIndex = 0;
+  renderStep(stepIndex);
+});
+
+playBtn.addEventListener("click", togglePlayback);
+
+jumpSelect.addEventListener("change", (event) => {
+  if (event.target.value === "") return;
+  stopPlayback();
+  stepIndex = Number(event.target.value);
+  renderStep(stepIndex);
+});
+
+stepRange.addEventListener("input", (event) => {
+  stopPlayback();
+  stepIndex = Number(event.target.value);
+  renderStep(stepIndex);
+});
+
+renderGraphBase();
+renderStep(stepIndex);
+</script>
+</body>
+</html>
