@@ -525,8 +525,8 @@ const edges = [
   { id: "1-2", from: 1, to: 2, weight: 2, labelDx: 24, labelDy: -18 },
   { id: "2-3", from: 2, to: 3, weight: 1, labelDx: 24, labelDy: 18 },
   { id: "3-0", from: 3, to: 0, weight: 4, labelDx: -24, labelDy: 18 },
-  { id: "0-2", from: 0, to: 2, weight: 10, labelDx: 0, labelDy: -30 },
-  { id: "1-3", from: 1, to: 3, weight: 6, labelDx: 34, labelDy: 0 }
+  { id: "0-2", from: 0, to: 2, weight: 10, labelDx: -70, labelDy: -18 },
+  { id: "1-3", from: 1, to: 3, weight: 6, labelDx: 24, labelDy: -70 }
 ];
 
 const n = vertices.length;
@@ -606,11 +606,9 @@ function buildFloydSteps() {
         } else if (updated) {
           reachableChecks++;
           updateCount++;
-          dist[i][j] = candidate;
-          edgeTo[i][j] = edgeTo[k][j];
           description = `检查 distTo[${i}][${j}]：经过 ${k} 的路径更短，所以更新 distTo[${i}][${j}]，并令 edgeTo[${i}][${j}] = edgeTo[${k}][${j}]。`;
           if (emitDetailedChecks) {
-            log.push(`更新 (${i},${j})：${formatDistance(before)} -> ${candidate}，edgeTo[${i}][${j}] = ${formatEdgeToValue(edgeTo[i][j])}。`);
+            log.push(`更新 (${i},${j})：${formatDistance(before)} -> ${candidate}，edgeTo[${i}][${j}] = ${formatEdgeToValue(edgeTo[k][j])}。`);
           }
         } else {
           if (canUseK) reachableChecks++;
@@ -637,6 +635,11 @@ function buildFloydSteps() {
               phase: "check"
             }
           );
+        }
+
+        if (updated) {
+          dist[i][j] = candidate;
+          edgeTo[i][j] = edgeTo[k][j];
         }
       }
     }
@@ -766,7 +769,8 @@ function buildGraphHighlight(step) {
   addPathEdges(targetEdges, reconstructPath(step.i, step.j, step.dist, step.edgeTo));
 
   if (step.updated) {
-    addPathEdges(updatedEdges, reconstructPath(step.i, step.j, step.dist, step.edgeTo));
+    addPathEdges(updatedEdges, reconstructPath(step.i, step.k, step.dist, step.edgeTo));
+    addPathEdges(updatedEdges, reconstructPath(step.k, step.j, step.dist, step.edgeTo));
   }
 
   return { viaEdges, targetEdges, updatedEdges };
@@ -789,8 +793,16 @@ function renderMatrix(container, matrix, step, kind) {
   for (let row = 0; row < n; row++) {
     html += `<tr><th>${row}</th>`;
     for (let col = 0; col < n; col++) {
-      const classes = matrixCellClasses(row, col, step, kind, matrix[row][col]);
-      html += `<td class="${classes}">${formatMatrixValue(matrix[row][col], kind)}</td>`;
+      let val = matrix[row][col];
+      if (step.i === row && step.j === col && step.updated) {
+        if (kind === "dist") {
+          val = step.candidate;
+        } else if (kind === "edgeTo") {
+          val = step.k !== null ? step.edgeTo[step.k][step.j] : val;
+        }
+      }
+      const classes = matrixCellClasses(row, col, step, kind, val);
+      html += `<td class="${classes}">${formatMatrixValue(val, kind)}</td>`;
     }
     html += "</tr>";
   }
@@ -864,9 +876,19 @@ function formatPathLine(step) {
     return "edgeTo[i][j] 保存从 i 到 j 当前最短路径的最后一条边。";
   }
 
-  const currentPath = reconstructPath(step.i, step.j, step.dist, step.edgeTo);
+  let currentPath;
+  let edgeToVal;
+  if (step.updated) {
+    const pathLeft = reconstructPath(step.i, step.k, step.dist, step.edgeTo);
+    const pathRight = reconstructPath(step.k, step.j, step.dist, step.edgeTo);
+    currentPath = pathLeft.concat(pathRight.slice(1));
+    edgeToVal = step.k !== null ? step.edgeTo[step.k][step.j] : null;
+  } else {
+    currentPath = reconstructPath(step.i, step.j, step.dist, step.edgeTo);
+    edgeToVal = step.edgeTo[step.i][step.j];
+  }
   const route = currentPath.length ? currentPath.join(" -> ") : "不可达";
-  return `当前已知路径 ${step.i} -> ${step.j}: ${route}；edgeTo[${step.i}][${step.j}] = ${formatEdgeToValue(step.edgeTo[step.i][step.j])}`;
+  return `当前已知路径 ${step.i} -> ${step.j}: ${route}；edgeTo[${step.i}][${step.j}] = ${formatEdgeToValue(edgeToVal)}`;
 }
 
 function formatMatrixValue(value, kind) {
