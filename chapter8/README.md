@@ -534,10 +534,48 @@ Dijkstra算法要求是非负权重。为了方便介绍，可以引入**最短�
 
 - 初始化时，`distTo[s]`位置为0，而其他`distTo[]`是无穷大。
 - 每一轮从尚未加入 SPT 的顶点中选择 `distTo[]` 最小的顶点 v，将其加入 SPT。
-- 然后松弛 v 的所有出边。
+- 然后松弛 v 的所有出边（会修改`distTo[]`）。
 - 当所有可达顶点都已加入 SPT，或者剩余未加入 SPT 的顶点的 `distTo[]` 均为正无穷时，算法结束。
 
 显然，每次都要选择**最小的**，因此需要使用优先级队列（最小堆）来实现，算法的时间复杂度是 $O(|E| \log |V|)$；如果不用优化，直接线性扫描`distTo[]`数组来选择最小的顶点，那么时间复杂度是 $O(|V|^2)$。这和Prim算法的分析一致。
+
+```
+1   function Dijkstra(Graph, source):
+2       Q ← Queue storing vertex priority
+3       
+4       dist[source] ← 0                          // Initialization
+5       Q.add_with_priority(source, 0)            // associated priority equals dist[·]
+6
+7       for each vertex v in Graph.Vertices:
+8           if v ≠ source
+9               prev[v] ← UNDEFINED               // Predecessor of v
+10              dist[v] ← INFINITY                // Unknown distance from source to v
+11              Q.add_with_priority(v, INFINITY)
+12
+13
+14      while Q is not empty:                     // The main loop
+15          u ← Q.extract_min()                   // Remove and return best vertex
+16          for each edge (u, v) :                // Go through all v neighbors of u
+17              alt ← dist[u] + Graph.Distance(u,v)
+18              if alt < dist[v]:
+19                  prev[v] ← u
+20                  dist[v] ← alt
+21                  Q.decrease_priority(v, alt)
+22
+23      return (dist, prev)
+```
+
+（可以发现，在实现中并不需要直接维护SPT树，Q本身只包含未确定距离的顶点（非SPT树）；而`prev[]`数组则可以用来回溯路径。）
+
+
+```
+What is the shortest way to travel from Rotterdam to Groningen, in general: from given city to given city. It is the algorithm for the shortest path, which I designed in about twenty minutes. One morning I was shopping in Amsterdam with my young fiancée, and tired, we sat down on the café terrace to drink a cup of coffee and I was just thinking about whether I could do this, and I then designed the algorithm for the shortest path. As I said, it was a twenty-minute invention. In fact, it was published in '59, three years later. The publication is still readable, it is, in fact, quite nice. One of the reasons that it is so nice was that I designed it without pencil and paper. I learned later that one of the advantages of designing without pencil and paper is that you are almost forced to avoid all avoidable complexities. Eventually, that algorithm became to my great amazement, one of the cornerstones of my fame.
+
+从鹿特丹到格罗宁根的最短旅行路线，其实就是寻找任意两个城市之间的最短路径问题。我设计的这个算法仅用了大约二十分钟就完成了。一天早晨，我和我的未婚妻在阿姆斯特丹购物时感到疲惫，便坐在咖啡馆的露天座位上喝咖啡；就在那时，我突然想到了这个问题，并立刻设计出了这个算法。正如我所说，这个算法的诞生其实只需短短二十分钟。该算法最终于1959年正式发表，至今仍具有很高的学术价值（这篇论文依然可以阅读，内容也非常精彩）。让我感到惊讶的是：我在设计这个算法时根本没有使用纸和笔；后来我发现，不使用纸和笔进行设计的一个显著优点就是能够避免那些不必要的复杂步骤。令人惊喜的是，这个算法后来成为了我声名的基础之一。
+
+— Edsger Dijkstra, in an interview with Philip L. Frana, Communications of the ACM, 2001[5]
+——埃德加·迪杰斯特拉在2001年接受菲利普·L·弗拉纳采访时所说，载于《ACM通讯》。
+```
 
 ### Floyd算法（多源最短路径）
 
@@ -549,4 +587,22 @@ $$
 dist[i][j] = \min(dist[i][j], dist[i][k] + dist[k][j])
 $$
 
+![floyd](floyd.png)
+
 显然，它有三层循环，时间复杂度是 $O(|V|^3)$。
+
+```c
+for (int k = 0; k < n; k++) {
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
+        }
+    }
+}
+```
+
+### 从另一个视角理解Dijkstra算法
+
+![dijkstra-vis](dijkstra-vis.png)
+
+上面`processed`是加入到SPT树中的顶点集合，`unprocessed`是尚未加入SPT树的顶点集合。每次从`unprocessed`中选择一个顶点v加入到`processed`中，并且更新v的邻居节点的距离；而“选择“的标准就是选择`distTo[]`最小的顶点v。
