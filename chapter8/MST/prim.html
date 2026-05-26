@@ -117,15 +117,26 @@ function addCandidates(v) {
     if (e.v === v && !state.visited.has(e.u)) other = e.u;
     if (other !== -1) state.candidates.push({...e, target: other});
   }
+  pruneCandidates();
+}
+
+function isCutEdge(e) {
+  return state.visited.has(e.u) !== state.visited.has(e.v);
+}
+
+function isValidCandidate(e) {
+  return !state.visited.has(e.target) && isCutEdge(e);
+}
+
+function pruneCandidates() {
+  state.candidates = state.candidates.filter(isValidCandidate);
   state.candidates.sort((a, b) => a.w - b.w);
 }
 
 function nextStep() {
   if (state.done) return;
 
-  while (state.candidates.length > 0 && state.visited.has(state.candidates[0].target)) {
-    state.candidates.shift();
-  }
+  pruneCandidates();
 
   if (state.candidates.length === 0) {
     state.done = true;
@@ -155,6 +166,7 @@ function nextStep() {
 function render() {
   ctx.clearRect(0, 0, CSS_WIDTH, CSS_HEIGHT);
 
+  pruneCandidates();
   const candidateKeys = new Set(state.candidates.map(e => edgeKey(e)));
 
   for (const e of graph.edges) {
@@ -175,7 +187,7 @@ function render() {
 
     const mx = (graph.vertices[e.u].x + graph.vertices[e.v].x) / 2;
     const my = (graph.vertices[e.u].y + graph.vertices[e.v].y) / 2;
-    ctx.fillStyle = isCurrent ? '#ffcc00' : isMST ? '#b388ff' : '#aaa';
+    ctx.fillStyle = isCurrent ? '#ffcc00' : isMST ? '#b388ff' : isCandidate ? '#e94560' : '#aaa';
     ctx.font = 'bold 14px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(e.w, mx, my - 6);

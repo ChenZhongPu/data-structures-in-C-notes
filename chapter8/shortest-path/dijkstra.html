@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dijkstra 单源最短路径动画</title>
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    padding: 24px;
+    background: #f6f7fb;
+    color: #1f2937;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+
+  .shell {
+    width: min(1280px, 100%);
+    margin: 0 auto;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: 24px;
+    line-height: 1.2;
+    color: #0f172a;
+  }
+
+  .meta {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .source-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 12px;
+    border: 1px solid #bfdbfe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 700;
+    font-size: 14px;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(560px, 1fr) 420px;
+    gap: 18px;
+    align-items: start;
+  }
+
+  .panel {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.07);
+  }
+
+  .graph-panel {
+    padding: 16px;
+  }
+
+  .graph-wrap {
+    width: 100%;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: linear-gradient(#fff, #f8fafc);
+    overflow: hidden;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 430px;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 14px;
+  }
+
+  button {
+    height: 36px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 6px;
+    background: #1d4ed8;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  button:hover:not(:disabled) {
+    background: #1e40af;
+  }
+
+  button.secondary {
+    background: #475569;
+  }
+
+  button.secondary:hover:not(:disabled) {
+    background: #334155;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+    background: #cbd5e1;
+    color: #64748b;
+  }
+
+  label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #475569;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  select {
+    height: 36px;
+    min-width: 72px;
+    padding: 0 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    color: #0f172a;
+    font-size: 14px;
+    font-weight: 700;
+  }
+
+  .step-range {
+    flex: 1 1 220px;
+    min-width: 180px;
+    accent-color: #1d4ed8;
+  }
+
+  .counter {
+    width: 88px;
+    color: #475569;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+    text-align: right;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    margin-top: 12px;
+    color: #475569;
+    font-size: 13px;
+  }
+
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .swatch {
+    width: 22px;
+    height: 4px;
+    border-radius: 999px;
+    background: #94a3b8;
+  }
+
+  .swatch.edge-to { background: #2563eb; }
+  .swatch.settled { background: #0f766e; }
+  .swatch.current { background: #f59e0b; }
+
+  .side-panel {
+    padding: 16px;
+  }
+
+  .section + .section {
+    margin-top: 16px;
+  }
+
+  h2 {
+    margin: 0 0 10px;
+    color: #0f172a;
+    font-size: 16px;
+  }
+
+  .description {
+    min-height: 92px;
+    padding: 12px;
+    border: 1px solid #dbeafe;
+    border-radius: 6px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    line-height: 1.55;
+    font-size: 14px;
+  }
+
+  .formula {
+    margin-top: 8px;
+    color: #334155;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 13px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  th,
+  td {
+    border-bottom: 1px solid #e2e8f0;
+    padding: 8px 7px;
+    text-align: center;
+    font-size: 13px;
+  }
+
+  th {
+    background: #f8fafc;
+    color: #475569;
+    font-weight: 700;
+  }
+
+  tr:last-child td {
+    border-bottom: 0;
+  }
+
+  td.mono {
+    font-family: Consolas, Menlo, monospace;
+  }
+
+  tr.settled-row td {
+    background: #ecfdf5;
+  }
+
+  tr.changed-row td {
+    background: #fff7ed;
+    outline: 2px solid #f59e0b;
+    outline-offset: -2px;
+  }
+
+  .status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 54px;
+    min-height: 22px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #475569;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .status.done {
+    background: #d1fae5;
+    color: #047857;
+  }
+
+  .status.open {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+
+  .status.infinity {
+    background: #f1f5f9;
+    color: #64748b;
+  }
+
+  .log {
+    max-height: 220px;
+    overflow: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #0f172a;
+    padding: 10px;
+    color: #dbeafe;
+    font-family: Consolas, Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.55;
+  }
+
+  .log-line {
+    white-space: pre-wrap;
+  }
+
+  .log-line.active {
+    color: #fbbf24;
+  }
+
+  .edge {
+    fill: none;
+    stroke: #cbd5e1;
+    stroke-width: 3;
+    marker-end: url(#arrow-default);
+    transition: stroke 0.2s, stroke-width 0.2s, opacity 0.2s;
+  }
+
+  .edge.edge-to {
+    stroke: #2563eb;
+    stroke-width: 5;
+    marker-end: url(#arrow-edge-to);
+  }
+
+  .edge.settled {
+    stroke: #0f766e;
+    stroke-width: 5;
+    marker-end: url(#arrow-settled);
+  }
+
+  .edge.current-update {
+    stroke: #f59e0b;
+    stroke-width: 6;
+    marker-end: url(#arrow-current);
+  }
+
+  .edge.current-skip {
+    stroke: #94a3b8;
+    stroke-width: 5;
+    stroke-dasharray: 9 7;
+    marker-end: url(#arrow-default);
+  }
+
+  .edge-label-bg {
+    fill: #fff;
+    stroke: #e2e8f0;
+    stroke-width: 1;
+  }
+
+  .edge-label {
+    fill: #334155;
+    font-size: 22px;
+    font-weight: 800;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+
+  .node circle {
+    fill: #fff;
+    stroke: #334155;
+    stroke-width: 3;
+    transition: fill 0.2s, stroke 0.2s, stroke-width 0.2s;
+  }
+
+  .node {
+    cursor: pointer;
+  }
+
+  .node text {
+    fill: #0f172a;
+    font-size: 30px;
+    font-weight: 800;
+    text-anchor: middle;
+    dominant-baseline: middle;
+  }
+
+  .node.source circle {
+    fill: #e2e8f0;
+    stroke: #0f172a;
+  }
+
+  .node.settled circle {
+    fill: #dcfce7;
+    stroke: #0f766e;
+  }
+
+  .node.current circle {
+    fill: #fef3c7;
+    stroke: #f59e0b;
+    stroke-width: 5;
+  }
+
+  .node.changed circle {
+    stroke: #f59e0b;
+    stroke-width: 5;
+  }
+
+  @media (max-width: 980px) {
+    body {
+      padding: 16px;
+    }
+
+    header {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .layout {
+      grid-template-columns: 1fr;
+    }
+
+    .side-panel {
+      order: -1;
+    }
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <h1>Dijkstra 单源最短路径动画</h1>
+      <p class="meta">按 README 中的流程：取未加入 SPT 且 distTo 最小的顶点，松弛它的所有出边。</p>
+    </div>
+    <div class="source-badge" id="sourceBadge">源点 s = 0</div>
+  </header>
+
+  <main class="layout">
+    <section class="panel graph-panel">
+      <div class="graph-wrap">
+        <svg id="graph" viewBox="0 0 980 560" role="img" aria-label="Dijkstra directed weighted graph animation">
+          <defs>
+            <marker id="arrow-default" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#cbd5e1"></path>
+            </marker>
+            <marker id="arrow-edge-to" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#2563eb"></path>
+            </marker>
+            <marker id="arrow-settled" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#0f766e"></path>
+            </marker>
+            <marker id="arrow-current" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#f59e0b"></path>
+            </marker>
+          </defs>
+          <g id="edges"></g>
+          <g id="labels"></g>
+          <g id="nodes"></g>
+        </svg>
+      </div>
+
+      <div class="controls">
+        <label for="sourceSelect">起点
+          <select id="sourceSelect" aria-label="选择 Dijkstra 起点"></select>
+        </label>
+        <button class="secondary" id="prevBtn" type="button">上一步</button>
+        <button id="playBtn" type="button">播放</button>
+        <button id="nextBtn" type="button">下一步</button>
+        <button class="secondary" id="resetBtn" type="button">重置</button>
+        <input class="step-range" id="stepRange" type="range" min="0" value="0" />
+        <div class="counter" id="counter">1 / 1</div>
+      </div>
+
+      <div class="legend" aria-hidden="true">
+        <span class="legend-item"><span class="swatch settled"></span>已确定的 SPT 边</span>
+        <span class="legend-item"><span class="swatch edge-to"></span>当前 edgeTo 边</span>
+        <span class="legend-item"><span class="swatch current"></span>正在松弛的边</span>
+        <span class="legend-item"><span class="swatch"></span>未使用的边</span>
+      </div>
+    </section>
+
+    <aside class="panel side-panel">
+      <section class="section">
+        <h2>当前步骤</h2>
+        <div class="description" id="description"></div>
+        <div class="formula" id="formula"></div>
+      </section>
+
+      <section class="section">
+        <h2>distTo / edgeTo</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>v</th>
+              <th>状态</th>
+              <th>distTo[v]</th>
+              <th>edgeTo[v]</th>
+            </tr>
+          </thead>
+          <tbody id="stateRows"></tbody>
+        </table>
+      </section>
+
+      <section class="section">
+        <h2>执行记录</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </aside>
+  </main>
+</div>
+
+<script>
+let source = 0;
+const nodeRadius = 43;
+const vertices = [
+  { id: 0, x: 110, y: 280 },
+  { id: 1, x: 310, y: 95 },
+  { id: 2, x: 500, y: 280 },
+  { id: 3, x: 310, y: 465 },
+  { id: 4, x: 700, y: 110 },
+  { id: 5, x: 700, y: 450 },
+  { id: 6, x: 885, y: 280 }
+];
+
+const edges = [
+  { id: "0-1", from: 0, to: 1, weight: 4, labelDx: -32, labelDy: -12 },
+  { id: "0-2", from: 0, to: 2, weight: 6, labelDx: 0, labelDy: -24 },
+  { id: "0-3", from: 0, to: 3, weight: 6, labelDx: -34, labelDy: 12 },
+  { id: "1-4", from: 1, to: 4, weight: 7, labelDx: 0, labelDy: -32 },
+  { id: "1-2", from: 1, to: 2, weight: 1, labelDx: 28, labelDy: -5 },
+  { id: "3-2", from: 3, to: 2, weight: 2, labelDx: -34, labelDy: 2 },
+  { id: "3-5", from: 3, to: 5, weight: 5, labelDx: 0, labelDy: 28 },
+  { id: "2-4", from: 2, to: 4, weight: 6, labelDx: -24, labelDy: -12 },
+  { id: "2-5", from: 2, to: 5, weight: 4, labelDx: -20, labelDy: 16 },
+  { id: "5-4", from: 5, to: 4, weight: 1, labelDx: 30, labelDy: 0 },
+  { id: "4-6", from: 4, to: 6, weight: 6, labelDx: 34, labelDy: -2 },
+  { id: "5-6", from: 5, to: 6, weight: 8, labelDx: 34, labelDy: 12 }
+];
+
+const edgeById = new Map(edges.map((edge) => [edge.id, edge]));
+const outgoing = new Map(vertices.map((vertex) => [vertex.id, []]));
+for (const edge of edges) {
+  outgoing.get(edge.from).push(edge);
+}
+
+const graphSvg = document.getElementById("graph");
+const edgesLayer = document.getElementById("edges");
+const labelsLayer = document.getElementById("labels");
+const nodesLayer = document.getElementById("nodes");
+const descriptionEl = document.getElementById("description");
+const formulaEl = document.getElementById("formula");
+const stateRows = document.getElementById("stateRows");
+const logEl = document.getElementById("log");
+const sourceBadge = document.getElementById("sourceBadge");
+const sourceSelect = document.getElementById("sourceSelect");
+const prevBtn = document.getElementById("prevBtn");
+const playBtn = document.getElementById("playBtn");
+const nextBtn = document.getElementById("nextBtn");
+const resetBtn = document.getElementById("resetBtn");
+const stepRange = document.getElementById("stepRange");
+const counterEl = document.getElementById("counter");
+
+let steps = buildDijkstraSteps();
+let stepIndex = 0;
+let timer = null;
+
+initSourceSelect();
+resetSteps();
+
+function buildDijkstraSteps() {
+  const dist = Array(vertices.length).fill(Infinity);
+  const edgeTo = Array(vertices.length).fill(null);
+  const settled = Array(vertices.length).fill(false);
+  const result = [];
+  const log = [];
+
+  dist[source] = 0;
+  pushStep("初始化", `distTo[${source}] = 0，其余顶点为无穷大；edgeTo 全部为空。`, null);
+
+  while (true) {
+    const v = nextMinVertex(dist, settled);
+    if (v === -1) break;
+
+    settled[v] = true;
+    log.push(`选中顶点 ${v}，distTo[${v}] = ${formatDistance(dist[v])}，加入 SPT。`);
+    pushStep(
+      `选择顶点 ${v}`,
+      `在尚未加入 SPT 的顶点中，${v} 的 distTo 最小，因此将 ${v} 加入 SPT，然后准备松弛它的出边。`,
+      { currentVertex: v }
+    );
+
+    for (const edge of outgoing.get(v)) {
+      const candidate = dist[edge.from] + edge.weight;
+      const before = dist[edge.to];
+      const updated = candidate < before;
+      let message;
+
+      if (updated) {
+        dist[edge.to] = candidate;
+        edgeTo[edge.to] = edge.id;
+        message = `松弛边 ${edgeText(edge)}：${formatDistance(dist[edge.from])} + ${edge.weight} = ${formatDistance(candidate)} 小于原 distTo[${edge.to}] = ${formatDistance(before)}，更新 distTo[${edge.to}] 和 edgeTo[${edge.to}]。`;
+        log.push(`更新：${edgeText(edge)}，distTo[${edge.to}] ${formatDistance(before)} -> ${formatDistance(candidate)}。`);
+      } else {
+        message = `松弛边 ${edgeText(edge)}：${formatDistance(dist[edge.from])} + ${edge.weight} = ${formatDistance(candidate)}，没有小于当前 distTo[${edge.to}] = ${formatDistance(before)}，因此保持不变。`;
+        log.push(`跳过：${edgeText(edge)}，候选距离 ${formatDistance(candidate)}，当前距离 ${formatDistance(before)}。`);
+      }
+
+      pushStep(
+        `松弛边 ${edge.from} -> ${edge.to}`,
+        message,
+        {
+          currentVertex: edge.from,
+          currentEdge: edge.id,
+          changedVertex: edge.to,
+          updated,
+          formula: `distTo[${edge.from}] + weight(${edge.from},${edge.to}) = ${formatDistance(dist[edge.from])} + ${edge.weight} = ${formatDistance(candidate)}`
+        }
+      );
+    }
+  }
+
+  pushStep(
+    "完成",
+    `所有从 ${source} 可达的顶点都已经加入 SPT。此时 distTo 保存从 ${source} 到各顶点的最短距离，edgeTo 保存对应最短路径上的最后一条边。`,
+    null
+  );
+
+  return result;
+
+  function pushStep(title, description, extra) {
+    result.push({
+      title,
+      description,
+      dist: dist.slice(),
+      edgeTo: edgeTo.slice(),
+      settled: settled.slice(),
+      log: log.slice(),
+      currentVertex: extra && extra.currentVertex !== undefined ? extra.currentVertex : null,
+      currentEdge: extra && extra.currentEdge ? extra.currentEdge : null,
+      changedVertex: extra && extra.changedVertex !== undefined ? extra.changedVertex : null,
+      updated: extra ? Boolean(extra.updated) : false,
+      formula: extra && extra.formula ? extra.formula : ""
+    });
+  }
+}
+
+function nextMinVertex(dist, settled) {
+  let best = -1;
+  for (const vertex of vertices) {
+    const v = vertex.id;
+    if (settled[v] || dist[v] === Infinity) continue;
+    if (best === -1 || dist[v] < dist[best] || (dist[v] === dist[best] && v < best)) {
+      best = v;
+    }
+  }
+  return best;
+}
+
+function renderGraphBase() {
+  edgesLayer.innerHTML = "";
+  labelsLayer.innerHTML = "";
+  nodesLayer.innerHTML = "";
+
+  for (const edge of edges) {
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("id", `edge-${edge.id}`);
+    path.setAttribute("class", "edge");
+    path.setAttribute("d", edgePath(edge));
+    edgesLayer.appendChild(path);
+
+    const label = labelPosition(edge);
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("id", `label-${edge.id}`);
+    group.innerHTML = `
+      <rect class="edge-label-bg" x="${label.x - 17}" y="${label.y - 17}" width="34" height="34" rx="17"></rect>
+      <text class="edge-label" x="${label.x}" y="${label.y}">${edge.weight}</text>
+    `;
+    labelsLayer.appendChild(group);
+  }
+
+  for (const vertex of vertices) {
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("id", `node-${vertex.id}`);
+    group.setAttribute("class", "node");
+    group.innerHTML = `
+      <circle cx="${vertex.x}" cy="${vertex.y}" r="${nodeRadius}"></circle>
+      <text x="${vertex.x}" y="${vertex.y + 1}">${vertex.id}</text>
+    `;
+    group.addEventListener("click", () => setSource(vertex.id));
+    nodesLayer.appendChild(group);
+  }
+}
+
+function renderStep(index) {
+  const step = steps[index];
+  const edgeToSet = new Set(step.edgeTo.filter(Boolean));
+  const settledEdgeSet = new Set();
+
+  for (let v = 0; v < step.edgeTo.length; v++) {
+    if (step.settled[v] && step.edgeTo[v]) {
+      settledEdgeSet.add(step.edgeTo[v]);
+    }
+  }
+
+  for (const edge of edges) {
+    const path = document.getElementById(`edge-${edge.id}`);
+    path.setAttribute("class", edgeClass(edge, step, edgeToSet, settledEdgeSet));
+  }
+
+  for (const vertex of vertices) {
+    const node = document.getElementById(`node-${vertex.id}`);
+    const classes = ["node"];
+    if (vertex.id === source) classes.push("source");
+    if (step.settled[vertex.id]) classes.push("settled");
+    if (step.currentVertex === vertex.id) classes.push("current");
+    if (step.changedVertex === vertex.id) classes.push("changed");
+    node.setAttribute("class", classes.join(" "));
+  }
+
+  descriptionEl.innerHTML = `<strong>${step.title}</strong><br>${step.description}`;
+  formulaEl.textContent = step.formula;
+  renderTable(step);
+  renderLog(step, index);
+  renderControls();
+}
+
+function edgeClass(edge, step, edgeToSet, settledEdgeSet) {
+  const classes = ["edge"];
+  if (step.currentEdge === edge.id) {
+    classes.push(step.updated ? "current-update" : "current-skip");
+  } else if (settledEdgeSet.has(edge.id)) {
+    classes.push("settled");
+  } else if (edgeToSet.has(edge.id)) {
+    classes.push("edge-to");
+  }
+  return classes.join(" ");
+}
+
+function renderTable(step) {
+  stateRows.innerHTML = vertices.map((vertex) => {
+    const v = vertex.id;
+    const settled = step.settled[v];
+    const finite = step.dist[v] !== Infinity;
+    const rowClass = [
+      settled ? "settled-row" : "",
+      step.changedVertex === v ? "changed-row" : ""
+    ].filter(Boolean).join(" ");
+    const statusClass = settled ? "done" : finite ? "open" : "infinity";
+    const statusText = settled ? "SPT" : finite ? "待选" : "∞";
+    return `
+      <tr class="${rowClass}">
+        <td class="mono">${v}</td>
+        <td><span class="status ${statusClass}">${statusText}</span></td>
+        <td class="mono">${formatDistance(step.dist[v])}</td>
+        <td class="mono">${formatEdgeTo(step.edgeTo[v])}</td>
+      </tr>
+    `;
+  }).join("");
+}
+
+function renderLog(step) {
+  const lines = step.log.length ? step.log : ["等待开始。"];
+  logEl.innerHTML = lines.map((line, index) => {
+    const active = index === lines.length - 1 ? " active" : "";
+    return `<div class="log-line${active}">${line}</div>`;
+  }).join("");
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function renderControls() {
+  prevBtn.disabled = stepIndex === 0;
+  nextBtn.disabled = stepIndex === steps.length - 1;
+  stepRange.value = String(stepIndex);
+  counterEl.textContent = `${stepIndex + 1} / ${steps.length}`;
+  playBtn.textContent = timer ? "暂停" : "播放";
+  sourceBadge.textContent = `源点 s = ${source}`;
+  sourceSelect.value = String(source);
+}
+
+function edgePath(edge) {
+  const from = vertices[edge.from];
+  const to = vertices[edge.to];
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy);
+  const ux = dx / length;
+  const uy = dy / length;
+  const startX = from.x + ux * nodeRadius;
+  const startY = from.y + uy * nodeRadius;
+  const endX = to.x - ux * (nodeRadius + 8);
+  const endY = to.y - uy * (nodeRadius + 8);
+  return `M ${startX} ${startY} L ${endX} ${endY}`;
+}
+
+function labelPosition(edge) {
+  const from = vertices[edge.from];
+  const to = vertices[edge.to];
+  return {
+    x: (from.x + to.x) / 2 + edge.labelDx,
+    y: (from.y + to.y) / 2 + edge.labelDy
+  };
+}
+
+function formatDistance(value) {
+  return value === Infinity ? "∞" : String(value);
+}
+
+function formatEdgeTo(edgeId) {
+  if (!edgeId) return "-";
+  const edge = edgeById.get(edgeId);
+  return `${edge.from}->${edge.to}`;
+}
+
+function edgeText(edge) {
+  return `${edge.from}->${edge.to}(${edge.weight})`;
+}
+
+function go(delta) {
+  stepIndex = Math.max(0, Math.min(steps.length - 1, stepIndex + delta));
+  renderStep(stepIndex);
+}
+
+function stopPlayback() {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+    renderControls();
+  }
+}
+
+function initSourceSelect() {
+  sourceSelect.innerHTML = vertices.map((vertex) => {
+    return `<option value="${vertex.id}">${vertex.id}</option>`;
+  }).join("");
+}
+
+function resetSteps() {
+  steps = buildDijkstraSteps();
+  stepIndex = 0;
+  stepRange.max = String(steps.length - 1);
+  stepRange.value = "0";
+}
+
+function setSource(nextSource) {
+  if (nextSource === source) return;
+  stopPlayback();
+  source = nextSource;
+  resetSteps();
+  renderStep(stepIndex);
+}
+
+function togglePlayback() {
+  if (timer) {
+    stopPlayback();
+    return;
+  }
+
+  timer = setInterval(() => {
+    if (stepIndex >= steps.length - 1) {
+      stopPlayback();
+      return;
+    }
+    go(1);
+  }, 1100);
+  renderControls();
+}
+
+prevBtn.addEventListener("click", () => {
+  stopPlayback();
+  go(-1);
+});
+
+nextBtn.addEventListener("click", () => {
+  stopPlayback();
+  go(1);
+});
+
+resetBtn.addEventListener("click", () => {
+  stopPlayback();
+  resetSteps();
+  renderStep(stepIndex);
+});
+
+playBtn.addEventListener("click", togglePlayback);
+
+sourceSelect.addEventListener("change", (event) => {
+  setSource(Number(event.target.value));
+});
+
+stepRange.addEventListener("input", (event) => {
+  stopPlayback();
+  stepIndex = Number(event.target.value);
+  renderStep(stepIndex);
+});
+
+renderGraphBase();
+renderStep(stepIndex);
+</script>
+</body>
+</html>
