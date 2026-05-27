@@ -26,6 +26,93 @@ ElemType list_get(const List L, size_t i);
 
 本节的`SqList`被设计成定长的，但在实践中，设计成可变长的更为常见。比如Java中的`ArrayList`，C++中的`std::vector`。
 
+### 教材代码中的几个实现问题
+
+首先，教材中的`CreateList`函数缺少容量检查。前文已经通过
+
+```c
+#define MaxSize 50
+```
+
+限制了顺序表的最大容量，但是在根据数组建立顺序表时，代码没有检查参数`n`是否超过`MaxSize`。如果`n > MaxSize`，循环会继续向`data`数组写入元素，从而导致数组越界。这不是单纯的风格问题，而是实际的内存安全问题。
+
+更合理的写法应该先检查`n`的合法性，同时检查内存分配是否成功：
+
+```c
+bool CreateList(SqList *&L, const ElemType a[], int n)
+{
+    if (n < 0 || n > MaxSize)
+        return false;
+
+    L = (SqList *)malloc(sizeof(SqList));
+    if (L == NULL)
+        return false;
+
+    for (int i = 0; i < n; i++)
+        L->data[i] = a[i];
+
+    L->length = n;
+    return true;
+}
+```
+
+其次，教材中的`ListInsert`函数存在一个大小写错误。前文宏定义的是`MaxSize`，但是插入函数中写成了`Maxsize`。C/C++区分大小写，因此`MaxSize`和`Maxsize`是两个不同的标识符，这会导致编译错误。
+
+同时，判断顺序表是否已满时，写成`L->length == MaxSize`虽然在正常情况下可以工作，但更稳妥的写法是`L->length >= MaxSize`，因为一旦`length`因为其他错误超过了上界，也应该拒绝继续插入。
+
+可以改成：
+
+```c
+bool ListInsert(SqList *&L, int i, ElemType e)
+{
+    if (L == NULL)
+        return false;
+
+    if (i < 1 || i > L->length + 1 || L->length >= MaxSize)
+        return false;
+
+    int pos = i - 1;  // 逻辑序号转换为物理下标
+
+    for (int j = L->length; j > pos; j--)
+        L->data[j] = L->data[j - 1];
+
+    L->data[pos] = e;
+    L->length++;
+
+    return true;
+}
+```
+
+第三，例2.4中的`partition1`函数返回类型写成了`int`，但函数体最后没有返回值。这是一个明显的代码错误。如果该函数只是为了完成划分操作，可以把返回类型改成`void`；但如果它要用于快速排序，那么它应该返回基准元素最终所在的位置。
+
+因此，更合理的写法是：
+
+```c
+int partition1(SqList *&L)
+{
+    int i = 0, j = L->length - 1;
+    ElemType base = L->data[0];
+
+    while (i < j)
+    {
+        while (i < j && L->data[j] > base)
+            j--;
+
+        while (i < j && L->data[i] <= base)
+            i++;
+
+        if (i < j)
+            swap(L->data[i], L->data[j]);
+    }
+
+    swap(L->data[0], L->data[i]);
+
+    return i;  // 返回基准元素最终位置
+}
+```
+
+
+
 在API的设计中，本书大量使用C++的引用用于返回值，但并不直观。比如下面的创建/初始化的API更合理：
 
 ```c
