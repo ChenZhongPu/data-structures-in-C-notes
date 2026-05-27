@@ -26,6 +26,20 @@ ElemType list_get(const List L, size_t i);
 
 本节的`SqList`被设计成定长的，但在实践中，设计成可变长的更为常见。比如Java中的`ArrayList`，C++中的`std::vector`。
 
+也正因为 `SqList` 是定长数组实现，教材 P.34 的 `CreateList(SqList *&L, ElemType a[], int n)` 需要先检查 `n` 是否超过 `MaxSize`。如果 `n > MaxSize`，继续复制 `a[0..n-1]` 会导致 `L->data` 越界写入。建表函数至少应该在复制前判断容量，并检查内存分配是否成功：
+
+```c
+if (n < 0 || n > MaxSize) {
+  return false;
+}
+L = (SqList *)malloc(sizeof(SqList));
+if (L == NULL) {
+  return false;
+}
+```
+
+如果函数接口仍保持 `void`，也应该在文字中明确 `n <= MaxSize` 是前置条件；否则读者容易误以为该函数可以处理任意长度的数组。
+
 在API的设计中，本书大量使用C++的引用用于返回值，但并不直观。比如下面的创建/初始化的API更合理：
 
 ```c

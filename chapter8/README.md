@@ -530,6 +530,9 @@ void relax(DirectedEdge e) {
 
 Dijkstra算法要求是非负权重。为了方便介绍，可以引入**最短路径树**（Shortest Path Tree, SPT）的概念，它是从起点出发的一个树，包含了所有从起点可达的顶点，并且每个顶点的路径都是最短的。Dijkstra算法实际上就是在构建这个最短路径树。
 
+> [!CAUTION]
+> 教材图 8.37 中如果出现 `1 -> 2` 权值为 `-3` 的负权边，就不适合继续作为 Dijkstra 算法示例。Dijkstra 的贪心选择依赖所有边权非负；存在负权边时，后续路径可能降低已经确定的距离，算法结论不再成立。若要讨论负权边，应改用 Bellman-Ford、SPFA 或 Floyd-Warshall 等算法；若该图只是反例，应明确说明 Dijkstra 不适用。
+
 整体上，Dijkstra算法和Prim算法非常相似：
 
 - 初始化时，`distTo[s]`位置为0，而其他`distTo[]`是无穷大。

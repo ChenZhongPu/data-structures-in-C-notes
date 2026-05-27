@@ -21,6 +21,14 @@ struct {
 - 更大空间的数组
 - 使用`wchar_t`
 
+P.17 的一元二次方程求根示例也有边界问题。函数 `solution(..., double &x1, double &x2)` 在判别式 `d==0` 的分支中只给 `x1` 赋值并返回1。如果调用者仍然读取 `x2`，会读到未初始化值。更合理的写法是重根时同时设置两个返回值：
+
+```c
+x1 = x2 = -b / (2 * a);
+```
+
+此外，该示例还应该先判断 `a` 是否为0，否则会出现除以0；对于浮点数判别式，也不建议直接使用 `d==0`，而应该使用误差范围判断。
+
 此外，1.1.3部分对存储结构类型的划分稍显混乱，一般很少见到“索引存储结构”的提法。
 
 本书对于指针使用的风格（比如 `struct Studnode * next`）不符合C语言的习惯（应该是出于印刷排版的考虑），但在真实编程中，**Code Style Matters**、**Name also Matters**。参考[命名约定](https://zh-google-styleguide.readthedocs.io/en/latest/google-cpp-styleguide/naming.html)。现代C/C++代码一般用`clang`自动格式化，可选的风格包括：LLVM、Google和GNU等。
