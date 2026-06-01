@@ -606,3 +606,78 @@ for (int k = 0; k < n; k++) {
 ![dijkstra-vis](dijkstra-vis.png)
 
 上面`processed`是加入到SPT树中的顶点集合，`unprocessed`是尚未加入SPT树的顶点集合。每次从`unprocessed`中选择一个顶点v加入到`processed`中，并且更新v的邻居节点的距离；而“选择“的标准就是选择`distTo[]`最小的顶点v。
+
+教材中关于min—heap结构的介绍较少，但min—heap又有较小的big O
+因此补充huffman编码和dijkstra算法用min—heap实现的代码
+
+### Min-Heap 实现 Huffman 编码
+
+```c
+typedef struct HuffmanNode {
+    char ch;
+    int freq;
+    struct HuffmanNode *left, *right;
+} HuffmanNode;
+
+typedef struct MinHeap {
+    int size;
+    int capacity;
+    HuffmanNode **array;
+} MinHeap;
+
+HuffmanNode *buildHuffmanTree(char data[], int freq[], int size) {
+    MinHeap *minHeap = createMinHeap(size);
+    for (int i = 0; i < size; i++)
+        insertMinHeap(minHeap, createHuffmanNode(data[i], freq[i]));
+
+    while (minHeap->size > 1) {
+        HuffmanNode *left = extractMin(minHeap);
+        HuffmanNode *right = extractMin(minHeap);
+        HuffmanNode *top = createHuffmanNode('$', left->freq + right->freq);
+        top->left = left;
+        top->right = right;
+        insertMinHeap(minHeap, top);
+    }
+
+    return extractMin(minHeap);
+}
+```
+
+### Min-Heap 实现 Dijkstra 算法
+
+```c
+typedef struct {
+    int vertex;
+    int dist;
+} HeapNode;
+
+typedef struct {
+    int size;
+    int capacity;
+    HeapNode **array;
+} MinHeap;
+
+void dijkstra(int graph[V][V], int src, int dist[]) {
+    MinHeap *minHeap = createMinHeap(V);
+    for (int v = 0; v < V; v++) {
+        dist[v] = INT_MAX;
+        insertMinHeap(minHeap, createHeapNode(v, dist[v]));
+    }
+
+    decreaseKey(minHeap, src, 0);
+    dist[src] = 0;
+
+    while (!isEmpty(minHeap)) {
+        HeapNode *minNode = extractMin(minHeap);
+        int u = minNode->vertex;
+
+        for (int v = 0; v < V; v++) {
+            if (graph[u][v] && dist[u] != INT_MAX &&
+                dist[u] + graph[u][v] < dist[v]) {
+                dist[v] = dist[u] + graph[u][v];
+                decreaseKey(minHeap, v, dist[v]);
+            }
+        }
+    }
+}
+```
