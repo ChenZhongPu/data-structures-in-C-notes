@@ -1,8 +1,10 @@
 #include "linked_list.h"
+#include "linked_list.c"
 #include <assert.h>
 #include <stdio.h>
 
-int main(void) {
+int main(void)
+{
   List list = list_init();
 
   assert(list_is_empty(list));
