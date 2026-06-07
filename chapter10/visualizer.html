@@ -1,0 +1,2743 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="一个现代且功能完备的排序算法交互式可视化教学工具，涵盖选择排序、插入排序、冒泡排序、希尔排序、归并排序、快速排序以及堆排序。包含大顶堆二叉树的实时动态追踪。">
+  <meta name="keywords" content="排序算法, 算法可视化, 堆排序, 快速排序, 归并排序, 希尔排序, 数据结构, 二叉堆, 动画演示">
+  <meta name="author" content="Antigravity">
+  <title>数据结构与算法：排序算法可视化</title>
+  
+  <!-- Import Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-primary: #f1f5f9; /* Slate 100 */
+      --bg-secondary: rgba(255, 255, 255, 0.85); /* White glass */
+      --bg-tertiary: rgba(241, 245, 249, 0.8);
+      --border-color: rgba(0, 0, 0, 0.08);
+      --border-focus: rgba(99, 102, 241, 0.5);
+      
+      --text-primary: #0f172a; /* Slate 900 */
+      --text-secondary: #475569; /* Slate 600 */
+      --text-muted: #64748b; /* Slate 500 */
+      
+      /* Accent Colors */
+      --accent-primary: #4f46e5; /* Indigo 600 */
+      --accent-secondary: #0891b2; /* Cyan 600 */
+      --accent-success: #059669; /* Emerald 600 */
+      --accent-warning: #d97706; /* Amber 600 */
+      --accent-danger: #dc2626; /* Red 600 */
+      
+      /* State Colors */
+      --color-compare: var(--accent-warning);
+      --color-swap: var(--accent-danger);
+      --color-pivot: var(--accent-secondary);
+      --color-sorted: var(--accent-success);
+      
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -2px rgba(0, 0, 0, 0.03);
+      
+      --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: radial-gradient(circle at 50% 50%, #f8fafc 0%, #e2e8f0 100%);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+      line-height: 1.5;
+    }
+
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.12);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.22);
+    }
+
+    /* Container */
+    .app-container {
+      max-width: 1440px;
+      margin: 0 auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Header */
+    .app-header {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      padding: 1.25rem 2rem;
+      border-radius: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow-md);
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .header-logo svg {
+      width: 32px;
+      height: 32px;
+      fill: var(--accent-primary);
+    }
+
+    .header-title h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      background: linear-gradient(135deg, #4f46e5 0%, #06b6d4 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-title p {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .author-badge {
+      font-size: 0.8rem;
+      padding: 0.35rem 0.75rem;
+      background: rgba(79, 70, 229, 0.08);
+      border: 1px solid rgba(79, 70, 229, 0.15);
+      border-radius: 20px;
+      color: #4f46e5;
+      font-weight: 500;
+    }
+
+    /* Grid Layout */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 1.5rem;
+      align-items: start;
+    }
+
+    @media (max-width: 1024px) {
+      .main-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Sidebar controls */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Card styling */
+    .panel-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      border-radius: 16px;
+      padding: 1.25rem;
+      box-shadow: var(--shadow-md);
+      transition: border-color 0.3s;
+    }
+
+    .panel-card:hover {
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-primary);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-left: 3px solid var(--accent-primary);
+      padding-left: 0.5rem;
+    }
+
+    /* Algorithm Selection Cards */
+    .algo-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
+    }
+
+    .algo-item {
+      padding: 0.75rem 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .algo-item:hover {
+      background: rgba(0, 0, 0, 0.02);
+      border-color: rgba(0, 0, 0, 0.15);
+      transform: translateX(4px);
+    }
+
+    .algo-item.active {
+      background: linear-gradient(135deg, rgba(79, 70, 229, 0.08) 0%, rgba(8, 145, 178, 0.04) 100%);
+      border-color: var(--accent-primary);
+      box-shadow: 0 0 12px rgba(79, 70, 229, 0.08);
+    }
+
+    .algo-name {
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--text-primary);
+    }
+
+    .algo-cname {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.1rem;
+    }
+
+    .algo-item.active .algo-cname {
+      color: #4f46e5;
+    }
+
+    .algo-item svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--text-muted);
+      transition: all 0.25s;
+    }
+
+    .algo-item.active svg {
+      fill: var(--accent-primary);
+      transform: scale(1.15);
+    }
+
+    /* Array Controls */
+    .control-group {
+      margin-bottom: 1.25rem;
+    }
+
+    .control-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    .control-val {
+      font-family: var(--font-mono);
+      color: var(--accent-secondary);
+      font-weight: 600;
+    }
+
+    /* Sliders */
+    .slider-input {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: rgba(0, 0, 0, 0.06);
+      border-radius: 3px;
+      outline: none;
+      margin: 0.5rem 0;
+    }
+
+    .slider-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(79, 70, 229, 0.3);
+      transition: transform 0.1s, background-color 0.1s;
+    }
+
+    .slider-input::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: var(--accent-secondary);
+    }
+
+    /* Select Inputs */
+    .preset-select {
+      width: 100%;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.65rem;
+      border-radius: 10px;
+      outline: none;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .preset-select:focus {
+      border-color: var(--accent-primary);
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      padding: 0.65rem 1rem;
+      border-radius: 10px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      outline: none;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary) 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(79, 70, 229, 0.3);
+    }
+
+    .btn-secondary {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Manual Input Section */
+    .manual-input-box {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .input-text {
+      flex: 1;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      outline: none;
+      font-family: var(--font-mono);
+      transition: border-color 0.2s;
+    }
+
+    .input-text:focus {
+      border-color: var(--accent-secondary);
+    }
+
+    .error-msg {
+      color: var(--accent-danger);
+      font-size: 0.75rem;
+      margin-top: 0.35rem;
+      background: rgba(220, 38, 38, 0.05);
+      border: 1px solid rgba(220, 38, 38, 0.15);
+      padding: 0.35rem 0.5rem;
+      border-radius: 6px;
+    }
+
+    /* Complexity Card */
+    .complexity-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .complexity-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.5rem;
+      text-align: center;
+    }
+
+    .complexity-label {
+      font-size: 0.65rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: 0.15rem;
+      font-weight: 600;
+    }
+
+    .complexity-val {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent-secondary);
+    }
+
+    .complexity-meta {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .complexity-meta-item {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.75rem;
+    }
+
+    .complexity-meta-label {
+      color: var(--text-secondary);
+    }
+
+    .complexity-meta-val {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .algo-desc {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.75rem;
+      border-top: 1px solid var(--border-color);
+      padding-top: 0.5rem;
+      line-height: 1.4;
+    }
+
+    /* Main Visualizer Window */
+    .visualizer-column {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .visualizer-card {
+      min-height: 520px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .visualizer-display {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      min-height: 380px;
+    }
+
+    /* Array container */
+    .array-container {
+      height: 240px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 1.5rem 1.5rem 2rem 1.5rem;
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      position: relative;
+    }
+
+    .bar {
+      flex: 1;
+      max-width: 45px;
+      min-width: 4px;
+      border-radius: 4px 4px 0 0;
+      transition: height 0.2s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s, opacity 0.2s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      align-items: center;
+      background: linear-gradient(to top, var(--accent-primary) 0%, var(--accent-secondary) 100%);
+    }
+
+    .bar-value {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: white;
+      margin-bottom: 0.25rem;
+      font-family: var(--font-mono);
+      text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      user-select: none;
+      transition: opacity 0.15s;
+    }
+
+    .bar-index {
+      position: absolute;
+      bottom: -1.4rem;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      font-weight: 500;
+    }
+
+    /* Bar state styles */
+    .bar.comparing {
+      background: linear-gradient(to top, var(--color-compare) 0%, #fbbf24 100%) !important;
+      box-shadow: 0 0 10px rgba(217, 119, 6, 0.3);
+    }
+
+    .bar.swapping {
+      background: linear-gradient(to top, var(--color-swap) 0%, #fca5a5 100%) !important;
+      box-shadow: 0 0 12px rgba(220, 38, 38, 0.4);
+    }
+
+    .bar.pivot {
+      background: linear-gradient(to top, var(--color-pivot) 0%, #22d3ee 100%) !important;
+      box-shadow: 0 0 10px rgba(8, 145, 178, 0.3);
+    }
+
+    .bar.sorted {
+      background: linear-gradient(to top, var(--color-sorted) 0%, #34d399 100%) !important;
+    }
+
+    .bar.dimmed {
+      opacity: 0.25;
+    }
+
+    .bar-key-badge {
+      position: absolute;
+      top: -26px;
+      background: var(--accent-secondary);
+      color: white;
+      font-size: 0.65rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      white-space: nowrap;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+      animation: bounce-badge 0.8s infinite alternate;
+      z-index: 10;
+    }
+
+    @keyframes bounce-badge {
+      from { transform: translateY(0); }
+      to { transform: translateY(-4px); }
+    }
+
+    /* Heap Tree Visualization Container */
+    .heap-container {
+      height: 240px;
+      background: rgba(255, 255, 255, 0.65);
+      border-radius: 12px;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      transition: height 0.3s ease, opacity 0.3s ease, margin 0.3s ease;
+      overflow: hidden;
+    }
+
+    .heap-container.hidden {
+      height: 0;
+      opacity: 0;
+      margin: 0;
+      border: none;
+      padding: 0;
+    }
+
+    .hidden:not(.heap-container) {
+      display: none !important;
+    }
+
+    .heap-title-mini {
+      position: absolute;
+      top: 0.5rem;
+      left: 0.75rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .heap-tree-svg {
+      width: 100%;
+      height: 100%;
+      margin-top: 1rem;
+    }
+
+    /* Node Animations & Styles in SVG */
+    .node-normal circle {
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    
+    .node-compare circle {
+      animation: pulse-ring-orange 1.5s infinite;
+    }
+
+    .node-swap circle {
+      animation: pulse-ring-red 1s infinite;
+    }
+
+    @keyframes pulse-ring-orange {
+      0% { stroke-width: 2px; stroke: rgba(217, 119, 6, 0.8); }
+      50% { stroke-width: 4px; stroke: rgba(217, 119, 6, 1); }
+      100% { stroke-width: 2px; stroke: rgba(217, 119, 6, 0.8); }
+    }
+
+    @keyframes pulse-ring-red {
+      0% { stroke-width: 2px; stroke: rgba(220, 38, 38, 0.8); }
+      50% { stroke-width: 5px; stroke: rgba(220, 38, 38, 1); }
+      100% { stroke-width: 2px; stroke: rgba(220, 38, 38, 0.8); }
+    }
+
+    /* Playback Panel */
+    .playback-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: var(--bg-tertiary);
+      border-radius: 12px;
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .control-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 1px solid var(--border-color);
+      background: var(--bg-secondary);
+      color: #334155;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .control-btn:hover {
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: white;
+      transform: scale(1.08);
+    }
+
+    .control-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .control-btn.play-btn {
+      width: 44px;
+      height: 44px;
+      background: var(--accent-primary);
+      border-color: var(--accent-primary);
+      color: white;
+    }
+
+    .control-btn.play-btn:hover {
+      background: #3b82f6;
+      transform: scale(1.1);
+    }
+
+    /* Timeline scrubber */
+    .scrub-container {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      width: 100%;
+    }
+
+    .scrub-slider {
+      flex: 1;
+      -webkit-appearance: none;
+      height: 4px;
+      background: rgba(0, 0, 0, 0.08);
+      border-radius: 2px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .scrub-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--accent-secondary);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    .scrub-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.3);
+    }
+
+    .step-counter {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      min-width: 80px;
+      text-align: right;
+    }
+
+    /* Live console info */
+    .console-panel {
+      background: rgba(255, 255, 255, 0.85);
+      border-radius: 10px;
+      padding: 0.75rem 1rem;
+      border-left: 4px solid var(--accent-secondary);
+      border-top: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      min-height: 44px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .console-message {
+      font-size: 0.8rem;
+      color: var(--text-primary);
+      line-height: 1.4;
+      font-weight: 500;
+    }
+
+    .stats-info {
+      display: flex;
+      gap: 1.25rem;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+    }
+
+    .stats-info span strong {
+      color: var(--accent-secondary);
+    }
+
+    /* Legend colors */
+    .legend-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+    
+    .dot-compare { background: var(--color-compare); }
+    .dot-swap { background: var(--color-swap); }
+    .dot-pivot { background: var(--color-pivot); }
+    .dot-sorted { background: var(--color-sorted); }
+
+    /* Toast notification styles */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: #ffffff;
+      border: 1px solid var(--accent-success);
+      color: var(--text-primary);
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    /* Quick help badge */
+    .heap-helper-tip {
+      font-size: 0.7rem;
+      color: var(--accent-secondary);
+      background: rgba(8, 145, 178, 0.05);
+      border: 1px solid rgba(8, 145, 178, 0.15);
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
+      margin-top: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-logo">
+        <svg viewBox="0 0 24 24">
+          <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-9 14H6v-6h4v6zm5 0h-4V7h4v10zm5 0h-4v-4h4v4z"/>
+        </svg>
+        <div class="header-title">
+          <h1>数据结构与算法之排序算法</h1>
+          <p>第十章：选择、插入、冒泡、希尔、归并、快排与堆排序的交互式动画演示</p>
+        </div>
+      </div>
+      <span class="author-badge">双端演示 & 堆树追踪</span>
+    </header>
+
+    <!-- Main Grid -->
+    <div class="main-grid">
+      
+      <!-- Left Sidebar: Controls -->
+      <aside class="sidebar">
+        
+        <!-- Algorithm Cards -->
+        <div class="panel-card">
+          <div class="panel-title">选择排序算法</div>
+          <div class="algo-list" id="algo-selector">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Array Config Panel -->
+        <div class="panel-card">
+          <div class="panel-title">数据配置</div>
+          
+          <div class="control-group">
+            <div class="control-label">
+              <span>数组初始排列</span>
+            </div>
+            <select id="array-preset" class="preset-select">
+              <option value="random">随机乱序</option>
+              <option value="nearly-sorted">几乎有序</option>
+              <option value="reverse">逆序 (Worst Case)</option>
+              <option value="sorted">完全有序 (Best Case)</option>
+            </select>
+          </div>
+
+          <div class="control-group">
+            <div class="control-label">
+              <span>数组大小 (N)</span>
+              <span id="size-val" class="control-val">10</span>
+            </div>
+            <input type="range" id="array-size" class="slider-input" min="3" max="16" value="10">
+            <div id="heap-size-hint" class="heap-helper-tip hidden">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+              堆排序配合 7 ~ 15 个元素，树形图表现最精致！
+            </div>
+          </div>
+
+          <button id="generate-btn" class="btn btn-primary">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+            生成新数组
+          </button>
+
+          <!-- Manual input -->
+          <div class="control-group" style="margin-top: 1.25rem; border-top: 1px solid var(--border-color); padding-top: 1rem;">
+            <div class="control-label">
+              <span>手动输入数组 (以逗号分隔唯一整数)</span>
+            </div>
+            <div class="manual-input-box">
+              <input type="text" id="manual-input" class="input-text" placeholder="例如: 12, 5, 8, 23, 19, 7">
+              <button id="apply-manual-btn" class="btn btn-secondary" style="width: auto; padding: 0.5rem 0.8rem;">应用</button>
+            </div>
+            <div id="input-error" class="error-msg hidden"></div>
+          </div>
+        </div>
+
+        <!-- Complexity Card -->
+        <div class="panel-card">
+          <div class="panel-title">算法复杂度与属性</div>
+          <div class="complexity-grid">
+            <div class="complexity-item">
+              <div class="complexity-label">最好时间</div>
+              <div class="complexity-val" id="complexity-best">O(N)</div>
+            </div>
+            <div class="complexity-item">
+              <div class="complexity-label">最坏时间</div>
+              <div class="complexity-val" id="complexity-worst">O(N²)</div>
+            </div>
+            <div class="complexity-item">
+              <div class="complexity-label">平均时间</div>
+              <div class="complexity-val" id="complexity-avg">O(N²)</div>
+            </div>
+          </div>
+          <div class="complexity-meta">
+            <div class="complexity-meta-item">
+              <span class="complexity-meta-label">空间复杂度</span>
+              <span class="complexity-meta-val" id="complexity-space">O(1)</span>
+            </div>
+            <div class="complexity-meta-item">
+              <span class="complexity-meta-label">稳定性</span>
+              <span class="complexity-meta-val" id="complexity-stable">稳定</span>
+            </div>
+          </div>
+          <div class="algo-desc" id="algo-description">
+            算法描述加载中...
+          </div>
+        </div>
+
+      </aside>
+
+      <!-- Right Main Column: Display & Playback -->
+      <main class="visualizer-column">
+        
+        <!-- Interactive visualizer -->
+        <div class="panel-card visualizer-card">
+          
+          <div class="visualizer-display">
+            <!-- Array Display -->
+            <div class="array-container" id="bar-display-container">
+              <!-- Dynamically populated bars -->
+            </div>
+
+            <!-- Heap Tree Structure Display (Visible only for heap sort) -->
+            <div class="heap-container hidden" id="heap-tree-box">
+              <div class="heap-title-mini">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                二叉堆结构 (Binary Heap Tree)
+              </div>
+              <svg id="heap-tree-container" class="heap-tree-svg">
+                <defs>
+                  <linearGradient id="normal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#6366f1" />
+                    <stop offset="100%" stop-color="#4f46e5" />
+                  </linearGradient>
+                  <linearGradient id="compare-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f59e0b" />
+                    <stop offset="100%" stop-color="#d97706" />
+                  </linearGradient>
+                  <linearGradient id="swap-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#f43f5e" />
+                    <stop offset="100%" stop-color="#dc2626" />
+                  </linearGradient>
+                  <linearGradient id="sink-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#22d3ee" />
+                    <stop offset="100%" stop-color="#0891b2" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            <!-- Aux Array Display (Visible only for merge sort during merge phase) -->
+            <div class="heap-container hidden" id="aux-container-box">
+              <div class="heap-title-mini">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <path d="M9 3v18M15 3v18"/>
+                </svg>
+                辅助数组 (Auxiliary Array - aux)
+              </div>
+              <div class="array-container" id="aux-display-container" style="height: 180px; background: rgba(0,0,0,0.02); border: none; margin-top: 1rem; padding-bottom: 2rem;">
+                <!-- Dynamically populated aux bars -->
+              </div>
+            </div>
+
+            <!-- Partition Display (Visible only for quick sort during partition phase) -->
+            <div class="heap-container hidden" id="partition-container-box">
+              <div class="heap-title-mini">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/>
+                  <line x1="4" y1="22" x2="4" y2="15"/>
+                </svg>
+                快速排序分区细节 (Quick Sort Partition - range [low..high])
+              </div>
+              <div class="array-container" id="partition-display-container" style="height: 180px; background: rgba(0,0,0,0.02); border: none; margin-top: 1rem; padding-bottom: 2rem;">
+                <!-- Dynamically populated partition bars -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Console & Live messages -->
+          <div class="console-panel">
+            <div class="console-message" id="console-msg">
+              点击上方“生成新数组”或选择算法开始演示。
+            </div>
+            <div class="stats-info">
+              <span>比较: <strong id="stat-compares">0</strong></span>
+              <span>交换/移动: <strong id="stat-swaps">0</strong></span>
+            </div>
+          </div>
+
+          <!-- Playback and Scrub Controls -->
+          <div class="playback-panel">
+            <div class="scrub-container">
+              <input type="range" id="timeline-scrub" class="scrub-slider" min="0" max="100" value="0">
+              <span class="step-counter" id="step-count">0 / 0</span>
+            </div>
+
+            <div class="playback-controls">
+              <!-- Left: Play buttons -->
+              <div class="btn-group">
+                <button class="control-btn" id="btn-reset" title="回到起点">
+                  <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/></svg>
+                </button>
+                <button class="control-btn" id="btn-prev" title="上一步">
+                  <svg viewBox="0 0 24 24"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
+                </button>
+                <button class="control-btn play-btn" id="btn-play" title="播放/暂停">
+                  <svg id="play-icon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <button class="control-btn" id="btn-next" title="下一步">
+                  <svg viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6v12zM16 6v12h2V6z"/></svg>
+                </button>
+              </div>
+
+              <!-- Center: States Legends -->
+              <div class="legend-container">
+                <div class="legend-item">
+                  <span class="legend-dot dot-compare"></span>
+                  <span>比较 / 扫描</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-swap"></span>
+                  <span>交换 / 写入</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-pivot"></span>
+                  <span>基准 (Pivot) / 间距 (h)</span>
+                </div>
+                <div class="legend-item">
+                  <span class="legend-dot dot-sorted"></span>
+                  <span>已就位 (Sorted)</span>
+                </div>
+              </div>
+
+              <!-- Right: Speed control -->
+              <div class="btn-group" style="flex: 1; min-width: 150px; justify-content: flex-end; gap: 0.75rem;">
+                <div class="control-label" style="margin-bottom: 0; white-space: nowrap;">
+                  <span>速度: </span>
+                  <span id="speed-val" class="control-val">100ms</span>
+                </div>
+                <input type="range" id="playback-speed" class="slider-input" min="10" max="1000" value="100" style="width: 100px;">
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+    </div>
+  </div>
+
+  <!-- Toast feedback -->
+  <div id="toast" class="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="color: var(--accent-success);"><path d="M20 6L9 17l-5-5"/></svg>
+    <span id="toast-text">数组应用成功</span>
+  </div>
+
+  <script>
+    // ----------------------------------------------------
+    // 1. Data Definitions and Algorithms
+    // ----------------------------------------------------
+    const ALGORITHMS = [
+      {
+        id: "selection",
+        name: "Selection Sort",
+        cname: "选择排序",
+        best: "O(N²)",
+        worst: "O(N²)",
+        avg: "O(N²)",
+        space: "O(1)",
+        stable: "不稳定",
+        desc: "每次在未排序的序列中找到最小的元素，放到已排序序列的末尾。该算法的比较次数固定为 N(N-1)/2 次，与其初始排列状态完全无关。"
+      },
+      {
+        id: "insertion",
+        name: "Insertion Sort",
+        cname: "插入排序",
+        best: "O(N)",
+        worst: "O(N²)",
+        avg: "O(N²)",
+        space: "O(1)",
+        stable: "稳定",
+        desc: "类似于打牌时整理手牌。每次从未排序部分取出一个元素，从后往前在已排序部分中比较并逐位向右挪出空位，最后将元素插入正确的位置。在部分有序的情况下性能表现非常好。"
+      },
+      {
+        id: "bubble",
+        name: "Bubble Sort",
+        cname: "冒泡排序",
+        best: "O(N)",
+        worst: "O(N²)",
+        avg: "O(N²)",
+        space: "O(1)",
+        stable: "稳定",
+        desc: "重复地遍历数组，依次比较相邻的两个元素，如果顺序错误就交换它们。最大元素会像气泡一样逐步“浮”到数组末尾。此处实现加入了 swap 标记，以便在已排好序的情况下提前跳出，达到 O(N) 的最好时间复杂度。"
+      },
+      {
+        id: "shell",
+        name: "Shell Sort",
+        cname: "希尔排序",
+        best: "O(N log N)",
+        worst: "O(N¹.⁵)",
+        avg: "O(N¹.²⁵)",
+        space: "O(1)",
+        stable: "不稳定",
+        desc: "插入排序的改进版，也是历史上第一个突破 O(N²) 的排序算法。它通过引入增量 h（此处使用 Knuth 序列 3h+1），允许交换相隔较远的元素，使数组逐步达到 h-有序，最终执行 h=1 的插入排序时只需很少的移动操作。"
+      },
+      {
+        id: "merge",
+        name: "Merge Sort",
+        cname: "归并排序",
+        best: "O(N log N)",
+        worst: "O(N log N)",
+        avg: "O(N log N)",
+        space: "O(N)",
+        stable: "稳定",
+        desc: "采用分治（Divide and Conquer）策略：将数组一分为二，递归对左右子数组进行归并排序，然后再利用一个辅助数组 aux，将两个已经有序的子区间双指针扫描合并回原数组。由于树的层数是 log N，每一层合并成本是 O(N)，总复杂度极其稳定。"
+      },
+      {
+        id: "quick",
+        name: "Quick Sort",
+        cname: "快速排序",
+        best: "O(N log N)",
+        worst: "O(N²)",
+        avg: "O(N log N)",
+        space: "O(log N)",
+        stable: "不稳定",
+        desc: "分治策略的另一代表。选择首个元素作为 pivot 基准，通过双指针 i 和 j 双向扫描，将大于 pivot 的放右侧，小于 pivot 的放左侧，最终把基准归位。为契合简单化要求，本例中不包含随机 shuffle 操作，因此在完全有序或逆序数组上会退化为最坏的 O(N²) 复杂度。"
+      },
+      {
+        id: "heap",
+        name: "Heap Sort",
+        cname: "堆排序",
+        best: "O(N log N)",
+        worst: "O(N log N)",
+        avg: "O(N log N)",
+        space: "O(1)",
+        stable: "不稳定",
+        desc: "利用完全二叉树的堆性质。首先从最后一个非叶子结点 (N/2 - 1) 开始自底向上执行 sink 下沉，将数组原位构建为一个大顶堆。接着不断将堆顶（最大值）与堆的尾部元素交换，并将堆的逻辑大小减 1 再次执行下沉，直到堆缩为 1。由于 keys 唯一，每次堆操作均耗时 O(log N)。"
+      }
+    ];
+
+    // ----------------------------------------------------
+    // 2. Step and Timeline Recording System
+    // ----------------------------------------------------
+    class Timeline {
+      constructor(arr) {
+        this.initialArray = [...arr];
+        this.steps = [];
+        this.stats = { comparisons: 0, swaps: 0, writes: 0 };
+        // Initial setup
+        this.addStep({
+          array: [...arr],
+          message: "初始化待排序数组"
+        });
+      }
+
+      addStep(state) {
+        this.steps.push({
+          array: [...state.array],
+          compares: state.compares ? [...state.compares] : [],
+          swaps: state.swaps ? [...state.swaps] : [],
+          copies: state.copies ? JSON.parse(JSON.stringify(state.copies)) : [], // list of {index, val}
+          pivot: state.pivot !== undefined ? state.pivot : -1,
+          keyValue: state.keyValue !== undefined ? state.keyValue : null,
+          activeRange: state.activeRange ? [...state.activeRange] : [0, this.initialArray.length - 1],
+          sorted: state.sorted ? [...state.sorted] : [],
+          heapActiveSize: state.heapActiveSize !== undefined ? state.heapActiveSize : -1,
+          heapSinkRoot: state.heapSinkRoot !== undefined ? state.heapSinkRoot : -1,
+          heapCompare: state.heapCompare ? [...state.heapCompare] : [],
+          auxArray: state.auxArray ? [...state.auxArray] : undefined,
+          auxCompares: state.auxCompares ? [...state.auxCompares] : undefined,
+          auxPointers: state.auxPointers ? { ...state.auxPointers } : undefined,
+          partArray: state.partArray ? [...state.partArray] : undefined,
+          partPivot: state.partPivot !== undefined ? state.partPivot : -1,
+          partPointers: state.partPointers ? { ...state.partPointers } : undefined,
+          partCompares: state.partCompares ? [...state.partCompares] : undefined,
+          partSwaps: state.partSwaps ? [...state.partSwaps] : undefined,
+          message: state.message || "",
+          stats: {
+            comparisons: this.stats.comparisons,
+            swaps: this.stats.swaps,
+            writes: this.stats.writes
+          }
+        });
+      }
+    }
+
+    // ----------------------------------------------------
+    // 3. Sorting Algorithms Implementation for Animation
+    // ----------------------------------------------------
+    function compileSelectionSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let sorted = [];
+
+      for (let i = 0; i < n - 1; i++) {
+        let min_index = i;
+        timeline.addStep({
+          array: a,
+          compares: [i],
+          sorted: [...sorted],
+          message: `设当前位置 a[${i}] (${a[i]}) 为当前未排序的最小值`
+        });
+
+        for (let j = i + 1; j < n; j++) {
+          timeline.stats.comparisons++;
+          let isNewMin = a[j] < a[min_index];
+          timeline.addStep({
+            array: a,
+            compares: [j, min_index],
+            sorted: [...sorted],
+            message: `比较 a[${j}] (${a[j]}) 与当前最小值 a[${min_index}] (${a[min_index]})${isNewMin ? "，发现新的最小值！" : ""}`
+          });
+          if (isNewMin) {
+            min_index = j;
+          }
+        }
+
+        if (min_index !== i) {
+          timeline.stats.swaps++;
+          let temp = a[i];
+          a[i] = a[min_index];
+          a[min_index] = temp;
+          timeline.addStep({
+            array: a,
+            swaps: [i, min_index],
+            sorted: [...sorted],
+            message: `将最小值 a[${min_index}] (${a[i]}) 与已排序序列末尾 a[${i}] (${a[min_index]}) 交换`
+          });
+        } else {
+          timeline.addStep({
+            array: a,
+            compares: [i],
+            sorted: [...sorted],
+            message: `最小值仍在位置 ${i} (${a[i]})，无需交换`
+          });
+        }
+        sorted.push(i);
+      }
+      sorted.push(n - 1);
+      timeline.addStep({
+        array: a,
+        sorted: [...sorted],
+        message: "排序全部完成！"
+      });
+      return timeline;
+    }
+
+    function compileInsertionSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let sorted = [0];
+
+      for (let i = 1; i < n; i++) {
+        let key = a[i];
+        let j = i;
+
+        timeline.addStep({
+          array: a,
+          pivot: i,
+          keyValue: key,
+          sorted: [...sorted],
+          message: `提取未排序元素 key = ${key} (位置 ${i})，准备向已排序区间插入`
+        });
+
+        while (j > 0) {
+          timeline.stats.comparisons++;
+          let shouldShift = a[j - 1] > key;
+          timeline.addStep({
+            array: a,
+            compares: [j - 1],
+            pivot: j,
+            keyValue: key,
+            sorted: [...sorted],
+            message: `比较前驱 a[${j - 1}] (${a[j - 1]}) 与 key (${key}): ${shouldShift ? "前驱较大，需要右移" : "位置正确，停止移动"}`
+          });
+
+          if (!shouldShift) break;
+
+          timeline.stats.writes++;
+          a[j] = a[j - 1];
+          timeline.addStep({
+            array: a,
+            copies: [{ index: j, val: a[j - 1] }],
+            pivot: j - 1,
+            keyValue: key,
+            sorted: [...sorted],
+            message: `将 a[${j - 1}] (${a[j - 1]}) 向右复制移动至 a[${j}]`
+          });
+          j--;
+        }
+
+        timeline.stats.writes++;
+        a[j] = key;
+        timeline.addStep({
+          array: a,
+          copies: [{ index: j, val: key }],
+          keyValue: key,
+          sorted: [...sorted],
+          message: `将 key (${key}) 插入到空缺的 a[${j}]`
+        });
+
+        for (let k = 0; k <= i; k++) {
+          if (!sorted.includes(k)) sorted.push(k);
+        }
+      }
+
+      timeline.addStep({
+        array: a,
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "排序全部完成！"
+      });
+      return timeline;
+    }
+
+    function compileBubbleSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let sorted = [];
+
+      for (let i = 0; i < n - 1; i++) {
+        let swapped = false;
+        for (let j = 0; j < n - 1 - i; j++) {
+          timeline.stats.comparisons++;
+          let shouldSwap = a[j] > a[j + 1];
+          
+          timeline.addStep({
+            array: a,
+            compares: [j, j + 1],
+            sorted: [...sorted],
+            message: `比较相邻元素 a[${j}] (${a[j]}) 与 a[${j + 1}] (${a[j + 1]}): ${shouldSwap ? "前者大于后者，需要交换" : "顺序正确，无需交换"}`
+          });
+
+          if (shouldSwap) {
+            timeline.stats.swaps++;
+            let temp = a[j];
+            a[j] = a[j + 1];
+            a[j + 1] = temp;
+            swapped = true;
+            timeline.addStep({
+              array: a,
+              swaps: [j, j + 1],
+              sorted: [...sorted],
+              message: `交换 a[${j}] (${a[j + 1]}) 和 a[${j + 1}] (${a[j]})`
+            });
+          }
+        }
+        sorted.push(n - 1 - i);
+        timeline.addStep({
+          array: a,
+          sorted: [...sorted],
+          message: `第 ${i + 1} 轮扫描完成，最大元素 a[${n - 1 - i}] (${a[n - 1 - i]}) 归位`
+        });
+
+        if (!swapped) {
+          timeline.addStep({
+            array: a,
+            sorted: Array.from({ length: n }, (_, idx) => idx),
+            message: "本轮遍历中未发生任何元素交换，说明数组已全部有序。提前退出！"
+          });
+          break;
+        }
+      }
+      timeline.addStep({
+        array: a,
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "排序全部完成！"
+      });
+      return timeline;
+    }
+
+    function compileShellSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+
+      let h = 1;
+      while (h < Math.floor(n / 3)) {
+        h = 3 * h + 1;
+      }
+
+      while (h >= 1) {
+        timeline.addStep({
+          array: a,
+          pivot: h,
+          message: `执行 h = ${h} 的希尔子数组排序`
+        });
+
+        for (let i = h; i < n; i++) {
+          for (let j = i; j >= h; j -= h) {
+            timeline.stats.comparisons++;
+            let shouldSwap = a[j] < a[j - h];
+            timeline.addStep({
+              array: a,
+              compares: [j, j - h],
+              pivot: h,
+              message: `在 h = ${h} 间隔中比较 a[${j}] (${a[j]}) 与 a[${j - h}] (${a[j - h]})`
+            });
+
+            if (shouldSwap) {
+              timeline.stats.swaps++;
+              let temp = a[j];
+              a[j] = a[j - h];
+              a[j - h] = temp;
+              timeline.addStep({
+                array: a,
+                swaps: [j, j - h],
+                pivot: h,
+                message: `交换间隔 h = ${h} 的两数 a[${j}] 和 a[${j - h}]`
+              });
+            } else {
+              break;
+            }
+          }
+        }
+        h = Math.floor(h / 3);
+      }
+
+      timeline.addStep({
+        array: a,
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "排序全部完成！"
+      });
+      return timeline;
+    }
+
+    function compileMergeSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let mid = Math.floor((n - 1) / 2);
+
+      // 1. Show division
+      timeline.addStep({
+        array: a,
+        activeRange: [0, n - 1],
+        pivot: mid,
+        message: `中点 mid = ${mid}。将整个数组切分为左半部分 a[0..${mid}] 与右半部分 a[${mid + 1}..${n - 1}]`
+      });
+
+      // 2. Sort Left Half (in one step)
+      let leftSorted = a.slice(0, mid + 1).sort((x, y) => x - y);
+      for (let k = 0; k <= mid; k++) {
+        a[k] = leftSorted[k];
+      }
+      timeline.stats.writes += (mid + 1);
+      timeline.addStep({
+        array: a,
+        activeRange: [0, mid],
+        message: `第一步：递归排序左半部分 a[0..${mid}]，排序后结果为 [${leftSorted.join(", ")}]`
+      });
+
+      // 3. Sort Right Half (in one step)
+      let rightSorted = a.slice(mid + 1, n).sort((x, y) => x - y);
+      for (let k = mid + 1; k < n; k++) {
+        a[k] = rightSorted[k - (mid + 1)];
+      }
+      timeline.stats.writes += (n - (mid + 1));
+      timeline.addStep({
+        array: a,
+        activeRange: [mid + 1, n - 1],
+        message: `第二步：递归排序右半部分 a[${mid + 1}..${n - 1}]，排序后结果为 [${rightSorted.join(", ")}]`
+      });
+
+      // 4. Copy to auxiliary array aux (in one step)
+      let aux = [...a];
+      timeline.addStep({
+        array: a,
+        auxArray: [...aux],
+        activeRange: [0, n - 1],
+        message: `准备归并：将已排序的左右部分复制到辅助数组 aux，准备进行双指针合并`
+      });
+
+      // 5. Step-by-step merge using double pointers i and j
+      let i = 0;
+      let j = mid + 1;
+
+      for (let k = 0; k < n; k++) {
+        // Compare step
+        let compares = [];
+        if (i <= mid && j < n) {
+          compares = [i, j];
+          timeline.stats.comparisons++;
+          timeline.addStep({
+            array: a,
+            auxArray: [...aux],
+            auxCompares: [i, j],
+            auxPointers: { i, j },
+            pivot: k, // mark target slot in a
+            activeRange: [0, n - 1],
+            message: `比较辅助数组中的左指针 aux[${i}] (${aux[i]}) 与右指针 aux[${j}] (${aux[j]})`
+          });
+        }
+
+        // Copy/write element back to a[k]
+        let sourceIdx = -1;
+        let valCopied = -1;
+
+        if (i > mid) {
+          sourceIdx = j;
+          valCopied = aux[j];
+          a[k] = aux[j];
+          j++;
+          timeline.stats.writes++;
+          timeline.addStep({
+            array: a,
+            auxArray: [...aux],
+            auxPointers: { i: -1, j: j < n ? j : -1 },
+            copies: [{ index: k, val: valCopied }],
+            activeRange: [0, n - 1],
+            message: `左侧半部分已用完。复制右侧元素 aux[${sourceIdx}] (${valCopied}) 到 a[${k}]`
+          });
+        } else if (j > n - 1) {
+          sourceIdx = i;
+          valCopied = aux[i];
+          a[k] = aux[i];
+          i++;
+          timeline.stats.writes++;
+          timeline.addStep({
+            array: a,
+            auxArray: [...aux],
+            auxPointers: { i: i <= mid ? i : -1, j: -1 },
+            copies: [{ index: k, val: valCopied }],
+            activeRange: [0, n - 1],
+            message: `右侧半部分已用完。复制左侧元素 aux[${sourceIdx}] (${valCopied}) 到 a[${k}]`
+          });
+        } else if (aux[j] < aux[i]) {
+          sourceIdx = j;
+          valCopied = aux[j];
+          a[k] = aux[j];
+          j++;
+          timeline.stats.writes++;
+          timeline.addStep({
+            array: a,
+            auxArray: [...aux],
+            auxPointers: { i: i <= mid ? i : -1, j: j < n ? j : -1 },
+            copies: [{ index: k, val: valCopied }],
+            activeRange: [0, n - 1],
+            message: `由于右侧 aux[${sourceIdx}] (${valCopied}) 较小，复制到 a[${k}]`
+          });
+        } else {
+          sourceIdx = i;
+          valCopied = aux[i];
+          a[k] = aux[i];
+          i++;
+          timeline.stats.writes++;
+          timeline.addStep({
+            array: a,
+            auxArray: [...aux],
+            auxPointers: { i: i <= mid ? i : -1, j: j < n ? j : -1 },
+            copies: [{ index: k, val: valCopied }],
+            activeRange: [0, n - 1],
+            message: `由于左侧 aux[${sourceIdx}] (${valCopied}) 较小/相等，复制到 a[${k}]`
+          });
+        }
+      }
+
+      // 6. Complete state
+      timeline.addStep({
+        array: a,
+        auxArray: [...aux],
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "左右有序子数组全部合并完成，归并排序结束！"
+      });
+
+      return timeline;
+    }
+
+    function compileQuickSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let sortedSet = new Set();
+
+      // First partition (low = 0, high = n - 1)
+      let pivot = a[0];
+      let i = 0;
+      let j = n; // high + 1
+
+      timeline.addStep({
+        array: a,
+        partArray: [...a],
+        partPivot: 0,
+        partPointers: { i: 0, j: n - 1 },
+        activeRange: [0, n - 1],
+        pivot: 0,
+        keyValue: pivot,
+        message: `选择首个元素 a[0] (${pivot}) 作为基准 (Pivot)，在下方展示详细的分区过程`
+      });
+
+      while (true) {
+        // Scan i to the right
+        while (true) {
+          i++;
+          if (i >= n - 1) break;
+          
+          timeline.stats.comparisons++;
+          timeline.addStep({
+            array: a,
+            partArray: [...a],
+            partPivot: 0,
+            partPointers: { i, j: j < n ? j : n - 1 },
+            partCompares: [i, 0],
+            activeRange: [0, n - 1],
+            pivot: 0,
+            keyValue: pivot,
+            message: `左指针 i 向右扫描：比较 a[${i}] (${a[i]}) 与基准 (${pivot})`
+          });
+          if (a[i] >= pivot) break;
+        }
+
+        // Scan j to the left
+        while (true) {
+          j--;
+          if (j <= 0) break;
+
+          timeline.stats.comparisons++;
+          timeline.addStep({
+            array: a,
+            partArray: [...a],
+            partPivot: 0,
+            partPointers: { i: i < n ? i : n - 1, j },
+            partCompares: [j, 0],
+            activeRange: [0, n - 1],
+            pivot: 0,
+            keyValue: pivot,
+            message: `右指针 j 向左扫描：比较 a[${j}] (${a[j]}) 与基准 (${pivot})`
+          });
+          if (a[j] <= pivot) break;
+        }
+
+        if (i >= j) {
+          timeline.addStep({
+            array: a,
+            partArray: [...a],
+            partPivot: 0,
+            partPointers: { i: i < n ? i : n - 1, j: j >= 0 ? j : 0 },
+            activeRange: [0, n - 1],
+            pivot: 0,
+            keyValue: pivot,
+            message: `指针相遇 (i = ${i} >= j = ${j})，第一阶段分区扫描结束`
+          });
+          break;
+        }
+
+        // Swap a[i] and a[j]
+        timeline.stats.swaps++;
+        let temp = a[i];
+        a[i] = a[j];
+        a[j] = temp;
+
+        timeline.addStep({
+          array: a,
+          partArray: [...a],
+          partPivot: 0,
+          partPointers: { i, j },
+          partSwaps: [i, j],
+          activeRange: [0, n - 1],
+          pivot: 0,
+          keyValue: pivot,
+          message: `交换左侧较大元素 a[${i}] (${a[i]}) 与右侧较小元素 a[${j}] (${a[j]})`
+        });
+      }
+
+      // Swap pivot with a[j]
+      timeline.stats.swaps++;
+      let tempPivot = a[0];
+      a[0] = a[j];
+      a[j] = tempPivot;
+      sortedSet.add(j);
+
+      timeline.addStep({
+        array: a,
+        partArray: [...a],
+        partPivot: j,
+        partPointers: { i: -1, j: -1 },
+        partSwaps: [0, j],
+        activeRange: [0, n - 1],
+        pivot: j,
+        keyValue: tempPivot,
+        message: `将基准 a[0] (${tempPivot}) 与 a[${j}] (${a[0]}) 交换，基准归位，第一阶段扫描分区完成！`
+      });
+
+      // Now sort left and right silently
+      let p = j;
+      
+      // Sort left half [0..p-1] in one step
+      if (p - 1 > 0) {
+        let leftArr = a.slice(0, p).sort((x, y) => x - y);
+        for (let k = 0; k < p; k++) {
+          a[k] = leftArr[k];
+          sortedSet.add(k);
+        }
+        timeline.stats.writes += p;
+        timeline.addStep({
+          array: a,
+          activeRange: [0, p - 1],
+          sorted: Array.from(sortedSet),
+          message: `递归排序左半部分 a[0..${p - 1}] 一次性完成：结果为 [${leftArr.join(", ")}]`
+        });
+      } else if (p - 1 === 0) {
+        sortedSet.add(0);
+      }
+
+      // Sort right half [p+1..n-1] in one step
+      if (p + 1 < n - 1) {
+        let rightArr = a.slice(p + 1, n).sort((x, y) => x - y);
+        for (let k = p + 1; k < n; k++) {
+          a[k] = rightArr[k - (p + 1)];
+          sortedSet.add(k);
+        }
+        timeline.stats.writes += (n - (p + 1));
+        timeline.addStep({
+          array: a,
+          activeRange: [p + 1, n - 1],
+          sorted: Array.from(sortedSet),
+          message: `递归排序右半部分 a[${p + 1}..${n - 1}] 一次性完成：结果为 [${rightArr.join(", ")}]`
+        });
+      } else if (p + 1 === n - 1) {
+        sortedSet.add(n - 1);
+      }
+
+      // Final complete step
+      timeline.addStep({
+        array: a,
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "基准分区及子区间递归排序全部完成，快速排序结束！"
+      });
+
+      return timeline;
+    }
+
+    function compileHeapSort(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      let sortedSet = new Set();
+
+      function swap(i, j) {
+        timeline.stats.swaps++;
+        let temp = a[i];
+        a[i] = a[j];
+        a[j] = temp;
+      }
+
+      // Silent sink for heap building and simplified sink steps
+      function silentSink(arrCopy, k, heapSize) {
+        while (2 * k + 1 < heapSize) {
+          let j = 2 * k + 1;
+          if (j + 1 < heapSize && arrCopy[j] < arrCopy[j + 1]) j++;
+          if (arrCopy[k] >= arrCopy[j]) break;
+          // Swap values
+          let temp = arrCopy[k];
+          arrCopy[k] = arrCopy[j];
+          arrCopy[j] = temp;
+          k = j;
+        }
+      }
+
+      // Phase 1: Build max heap silently
+      for (let k = Math.floor(n / 2) - 1; k >= 0; k--) {
+        silentSink(a, k, n);
+      }
+
+      // Record built heap in one single step
+      timeline.addStep({
+        array: a,
+        heapActiveSize: n,
+        message: "第一阶段：原位构建大顶堆 (Max Heap) 已一次性完成，准备提取最大元素"
+      });
+
+      // Phase 2: Heap sort (simplified sink steps)
+      for (let i = n - 1; i > 0; i--) {
+        // Step 1: Swap root (0) with last element (i)
+        timeline.addStep({
+          array: a,
+          heapActiveSize: i + 1,
+          swaps: [0, i],
+          sorted: Array.from(sortedSet),
+          message: `将当前最大元素(堆顶) a[0] (${a[0]}) 与堆尾 a[${i}] (${a[i]}) 交换`
+        });
+        swap(0, i);
+        sortedSet.add(i);
+
+        // Step 2: Sink the new root silently and record the final state in one step
+        silentSink(a, 0, i);
+
+        timeline.addStep({
+          array: a,
+          heapActiveSize: i,
+          sorted: Array.from(sortedSet),
+          message: `堆逻辑容量减为 ${i}，一次性下沉完成，恢复大顶堆性质`
+        });
+      }
+      sortedSet.add(0);
+
+      timeline.addStep({
+        array: a,
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        message: "所有堆元素均已出堆，堆排序全部完成！"
+      });
+      return timeline;
+    }
+
+    // Map ID to function
+    function getAlgorithmTimeline(id, arr) {
+      switch (id) {
+        case "selection": return compileSelectionSort(arr);
+        case "insertion": return compileInsertionSort(arr);
+        case "bubble": return compileBubbleSort(arr);
+        case "shell": return compileShellSort(arr);
+        case "merge": return compileMergeSort(arr);
+        case "quick": return compileQuickSort(arr);
+        case "heap": return compileHeapSort(arr);
+        default: return compileSelectionSort(arr);
+      }
+    }
+
+    // ----------------------------------------------------
+    // 4. UI Manager and Player State
+    // ----------------------------------------------------
+    let currentArray = [];
+    let selectedAlgo = ALGORITHMS[0];
+    let activeTimeline = null;
+    let playbackIndex = 0;
+    let isPlaying = false;
+    let playTimer = null;
+    let speedMs = 100;
+
+    // Elements
+    const algoSelector = document.getElementById("algo-selector");
+    const arrayPreset = document.getElementById("array-preset");
+    const arraySizeInput = document.getElementById("array-size");
+    const sizeValLabel = document.getElementById("size-val");
+    const generateBtn = document.getElementById("generate-btn");
+    const manualInput = document.getElementById("manual-input");
+    const applyManualBtn = document.getElementById("apply-manual-btn");
+    const inputError = document.getElementById("input-error");
+    
+    // Complexity
+    const compBest = document.getElementById("complexity-best");
+    const compWorst = document.getElementById("complexity-worst");
+    const compAvg = document.getElementById("complexity-avg");
+    const compSpace = document.getElementById("complexity-space");
+    const compStable = document.getElementById("complexity-stable");
+    const algoDescription = document.getElementById("algo-description");
+    
+    // Visualizer Elements
+    const barDisplayContainer = document.getElementById("bar-display-container");
+    const heapTreeBox = document.getElementById("heap-tree-box");
+    const heapTreeContainer = document.getElementById("heap-tree-container");
+    const heapSizeHint = document.getElementById("heap-size-hint");
+    const auxContainerBox = document.getElementById("aux-container-box");
+    const auxDisplayContainer = document.getElementById("aux-display-container");
+    const partitionContainerBox = document.getElementById("partition-container-box");
+    const partitionDisplayContainer = document.getElementById("partition-display-container");
+    
+    // Playback Controls
+    const timelineScrub = document.getElementById("timeline-scrub");
+    const stepCountLabel = document.getElementById("step-count");
+    const btnReset = document.getElementById("btn-reset");
+    const btnPrev = document.getElementById("btn-prev");
+    const btnPlay = document.getElementById("btn-play");
+    const btnNext = document.getElementById("btn-next");
+    const playIcon = document.getElementById("play-icon");
+    const playbackSpeed = document.getElementById("playback-speed");
+    const speedValLabel = document.getElementById("speed-val");
+    const consoleMsg = document.getElementById("console-msg");
+    const statCompares = document.getElementById("stat-compares");
+    const statSwaps = document.getElementById("stat-swaps");
+    const toast = document.getElementById("toast");
+    const toastText = document.getElementById("toast-text");
+
+    // Initialize Algorithm Card List
+    function initAlgoList() {
+      algoSelector.innerHTML = "";
+      ALGORITHMS.forEach((algo, idx) => {
+        const item = document.createElement("div");
+        item.className = `algo-item ${idx === 0 ? "active" : ""}`;
+        item.dataset.id = algo.id;
+        item.innerHTML = `
+          <div>
+            <div class="algo-name">${algo.name}</div>
+            <div class="algo-cname">${algo.cname}</div>
+          </div>
+          <svg viewBox="0 0 24 24">
+            <path d="M8 5v14l11-7z"/>
+          </svg>
+        `;
+        item.addEventListener("click", () => selectAlgorithm(algo.id));
+        algoSelector.appendChild(item);
+      });
+      selectAlgorithm(selectedAlgo.id);
+    }
+
+    function selectAlgorithm(id) {
+      selectedAlgo = ALGORITHMS.find(a => a.id === id);
+      
+      // Update UI cards
+      document.querySelectorAll(".algo-item").forEach(item => {
+        item.classList.toggle("active", item.dataset.id === id);
+      });
+
+      // Update Complexity Card
+      compBest.innerText = selectedAlgo.best;
+      compWorst.innerText = selectedAlgo.worst;
+      compAvg.innerText = selectedAlgo.avg;
+      compSpace.innerText = selectedAlgo.space;
+      compStable.innerText = selectedAlgo.stable;
+      algoDescription.innerText = selectedAlgo.desc;
+
+      // Toggle Heap Visualization
+      if (id === "heap") {
+        heapTreeBox.classList.remove("hidden");
+        heapSizeHint.classList.remove("hidden");
+      } else {
+        heapTreeBox.classList.add("hidden");
+        heapSizeHint.classList.add("hidden");
+      }
+
+      pausePlayback();
+      calculateTimeline();
+    }
+
+    // Array Generation Utilities
+    function generatePresetArray() {
+      const size = parseInt(arraySizeInput.value);
+      const preset = arrayPreset.value;
+      let arr = [];
+
+      // Generate distinct random values
+      if (preset === "random") {
+        const pool = Array.from({ length: 100 }, (_, i) => i + 5);
+        // Shuffle pool
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        arr = pool.slice(0, size);
+      } else if (preset === "sorted") {
+        arr = Array.from({ length: size }, (_, i) => Math.floor(100 * (i + 1) / size) + 3);
+      } else if (preset === "reverse") {
+        arr = Array.from({ length: size }, (_, i) => Math.floor(100 * (size - i) / size) + 3);
+      } else if (preset === "nearly-sorted") {
+        arr = Array.from({ length: size }, (_, i) => Math.floor(100 * (i + 1) / size) + 3);
+        // Swap ~15% adjacent nodes
+        const swapsCount = Math.max(1, Math.floor(size * 0.15));
+        for (let s = 0; s < swapsCount; s++) {
+          const idx = Math.floor(Math.random() * (size - 1));
+          [arr[idx], arr[idx + 1]] = [arr[idx + 1], arr[idx]];
+        }
+      }
+
+      // Ensure elements are unique by adding offsets if any collision
+      const unique = Array.from(new Set(arr));
+      let currentVal = 80;
+      while (unique.length < size) {
+        if (!unique.includes(currentVal)) {
+          unique.push(currentVal);
+        }
+        currentVal += 3;
+      }
+      
+      currentArray = unique;
+      document.getElementById("manual-input").value = currentArray.join(", ");
+      clearError();
+      calculateTimeline();
+    }
+
+    function calculateTimeline() {
+      activeTimeline = getAlgorithmTimeline(selectedAlgo.id, currentArray);
+      playbackIndex = 0;
+      updatePlaybackUI();
+    }
+
+    // Render Array Bars
+    function renderArrayBars(step) {
+      barDisplayContainer.innerHTML = "";
+      const size = step.array.length;
+
+      // Progressive layout sizing optimized for size in range 3 to 16
+      const barMaxWidth = size <= 6 ? "110px" : size <= 10 ? "85px" : "60px";
+      const barGap = size <= 6 ? "24px" : size <= 10 ? "16px" : "10px";
+      barDisplayContainer.style.gap = barGap;
+
+      // Progressive height scaling parameters
+      const minHeightPct = size <= 6 ? 20 : size <= 10 ? 16 : 10;
+      const maxHeightPct = size <= 6 ? 94 : size <= 10 ? 92 : 90;
+
+      // Get sorted copy of values from the INITIAL array to ensure stable absolute ranks
+      const sortedVals = activeTimeline ? [...activeTimeline.initialArray].sort((x, y) => x - y) : [...step.array].sort((x, y) => x - y);
+
+      step.array.forEach((val, idx) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.maxWidth = barMaxWidth;
+        
+        // Find rank of the current value
+        const rank = sortedVals.indexOf(val);
+        
+        // Height scaled relative to rank to ensure uniform height spacing
+        const heightPct = minHeightPct + (rank / Math.max(1, size - 1)) * (maxHeightPct - minHeightPct);
+        bar.style.height = `${heightPct}%`;
+
+        // Highlight states
+        const isSwapping = step.swaps.includes(idx) || step.copies.some(c => c.index === idx);
+        const isComparing = step.compares.includes(idx);
+        const isSorted = step.sorted.includes(idx);
+        const isPivot = idx === step.pivot;
+        
+        // Active range dimming (Merge Sort / Quick Sort)
+        const inActiveRange = idx >= step.activeRange[0] && idx <= step.activeRange[1];
+        const isMergeOrQuick = selectedAlgo.id === "merge" || selectedAlgo.id === "quick";
+        
+        if (isMergeOrQuick && !inActiveRange && !isSorted) {
+          bar.classList.add("dimmed");
+        }
+
+        if (isSwapping) bar.classList.add("swapping");
+        else if (isComparing) bar.classList.add("comparing");
+        else if (isPivot) bar.classList.add("pivot");
+        else if (isSorted) bar.classList.add("sorted");
+
+        // Floating Key/Pivot badge
+        if (isPivot && step.keyValue !== undefined && step.keyValue !== null) {
+          const keyBadge = document.createElement("div");
+          keyBadge.className = "bar-key-badge";
+          const label = selectedAlgo.id === "quick" ? "Pivot" : "Key";
+          keyBadge.innerHTML = `🔑 ${label}: ${step.keyValue}`;
+          
+          if (size <= 6) {
+            keyBadge.style.top = "-34px";
+            keyBadge.style.fontSize = "0.8rem";
+            keyBadge.style.padding = "0.25rem 0.6rem";
+          } else if (size <= 10) {
+            keyBadge.style.top = "-30px";
+            keyBadge.style.fontSize = "0.75rem";
+            keyBadge.style.padding = "0.2rem 0.5rem";
+          }
+          bar.appendChild(keyBadge);
+        }
+
+        // Value text inside bar (always visible since max N is 16)
+        const text = document.createElement("span");
+        text.className = "bar-value";
+        text.innerText = val;
+        
+        if (size <= 6) {
+          text.style.fontSize = "1.05rem";
+          text.style.marginBottom = "0.6rem";
+        } else if (size <= 10) {
+          text.style.fontSize = "0.95rem";
+          text.style.marginBottom = "0.5rem";
+        } else {
+          text.style.fontSize = "0.85rem";
+        }
+        bar.appendChild(text);
+
+        // Index label under bar
+        const idxLabel = document.createElement("span");
+        idxLabel.className = "bar-index";
+        idxLabel.innerText = idx;
+        
+        if (size <= 6) {
+          idxLabel.style.fontSize = "1rem";
+          idxLabel.style.bottom = "-2rem";
+        } else if (size <= 10) {
+          idxLabel.style.fontSize = "0.9rem";
+          idxLabel.style.bottom = "-1.8rem";
+        } else {
+          idxLabel.style.fontSize = "0.8rem";
+          idxLabel.style.bottom = "-1.6rem";
+        }
+        bar.appendChild(idxLabel);
+
+        barDisplayContainer.appendChild(bar);
+      });
+    }
+
+    // Render Aux Array Bars
+    function renderAuxBars(step) {
+      auxDisplayContainer.innerHTML = "";
+      const aux = step.auxArray;
+      if (!aux) {
+        // Show placeholder when aux array is not yet populated
+        const placeholder = document.createElement("div");
+        placeholder.style.display = "flex";
+        placeholder.style.alignItems = "center";
+        placeholder.style.justifyContent = "center";
+        placeholder.style.width = "100%";
+        placeholder.style.height = "100%";
+        placeholder.style.color = "var(--text-muted)";
+        placeholder.style.fontSize = "0.9rem";
+        placeholder.style.fontStyle = "italic";
+        placeholder.innerText = "辅助数组 (aux) 尚未拷贝值，准备在左右子部分排好序后，一并拷贝至此进行合并。";
+        auxDisplayContainer.appendChild(placeholder);
+        return;
+      }
+      const size = aux.length;
+
+      // Sizing matching a
+      const barMaxWidth = size <= 6 ? "110px" : size <= 10 ? "85px" : "60px";
+      const barGap = size <= 6 ? "24px" : size <= 10 ? "16px" : "10px";
+      auxDisplayContainer.style.gap = barGap;
+
+      const minHeightPct = size <= 6 ? 20 : size <= 10 ? 16 : 10;
+      const maxHeightPct = size <= 6 ? 94 : size <= 10 ? 92 : 90;
+      
+      // Get sorted copy of values from the INITIAL array to ensure stable absolute ranks
+      const sortedVals = activeTimeline ? [...activeTimeline.initialArray].sort((x, y) => x - y) : [...aux].sort((x, y) => x - y);
+
+      aux.forEach((val, idx) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.maxWidth = barMaxWidth;
+        
+        // Use teal/cyan gradient for aux bars to distinguish from a
+        bar.style.background = "linear-gradient(to top, #14b8a6, #0891b2)";
+        
+        const rank = sortedVals.indexOf(val);
+        const heightPct = minHeightPct + (rank / Math.max(1, size - 1)) * (maxHeightPct - minHeightPct);
+        bar.style.height = `${heightPct}%`;
+
+        // Highlight states in aux
+        const isComparing = step.auxCompares && step.auxCompares.includes(idx);
+        const isPointerI = step.auxPointers && step.auxPointers.i === idx;
+        const isPointerJ = step.auxPointers && step.auxPointers.j === idx;
+
+        if (isComparing) {
+          bar.classList.add("comparing"); // Orange
+        }
+
+        // Pointer label badge i or j
+        if (isPointerI || isPointerJ) {
+          const ptrLabel = document.createElement("div");
+          ptrLabel.className = "bar-key-badge";
+          ptrLabel.style.background = isPointerI ? "var(--accent-primary)" : "var(--accent-secondary)";
+          ptrLabel.innerHTML = isPointerI ? "i" : "j";
+          ptrLabel.style.top = "-24px";
+          ptrLabel.style.animation = "none"; // static label
+          bar.appendChild(ptrLabel);
+        }
+
+        // Value text
+        const text = document.createElement("span");
+        text.className = "bar-value";
+        text.innerText = val;
+        if (size <= 6) {
+          text.style.fontSize = "1.05rem";
+          text.style.marginBottom = "0.6rem";
+        } else if (size <= 10) {
+          text.style.fontSize = "0.95rem";
+          text.style.marginBottom = "0.5rem";
+        } else {
+          text.style.fontSize = "0.85rem";
+        }
+        bar.appendChild(text);
+
+        // Index label
+        const idxLabel = document.createElement("span");
+        idxLabel.className = "bar-index";
+        idxLabel.innerText = idx;
+        if (size <= 6) {
+          idxLabel.style.fontSize = "1rem";
+          idxLabel.style.bottom = "-2rem";
+        } else if (size <= 10) {
+          idxLabel.style.fontSize = "0.9rem";
+          idxLabel.style.bottom = "-1.8rem";
+        } else {
+          idxLabel.style.fontSize = "0.8rem";
+          idxLabel.style.bottom = "-1.6rem";
+        }
+        bar.appendChild(idxLabel);
+
+        auxDisplayContainer.appendChild(bar);
+      });
+    }
+
+    // Render Partition Array Bars
+    function renderPartitionBars(step) {
+      partitionDisplayContainer.innerHTML = "";
+      const part = step.partArray;
+      if (!part) {
+        // Show placeholder when partition is not active or finished
+        const placeholder = document.createElement("div");
+        placeholder.style.display = "flex";
+        placeholder.style.alignItems = "center";
+        placeholder.style.justifyContent = "center";
+        placeholder.style.width = "100%";
+        placeholder.style.height = "100%";
+        placeholder.style.color = "var(--text-muted)";
+        placeholder.style.fontSize = "0.9rem";
+        placeholder.style.fontStyle = "italic";
+        
+        const isFinished = playbackIndex > 0 && activeTimeline && playbackIndex >= activeTimeline.steps.findIndex(s => s.partArray === undefined && s.message.includes("递归排序"));
+        placeholder.innerText = isFinished 
+          ? "首个分区操作已完成，后续子区间已一次性完成递归排序。"
+          : "分区细节 (partition) 尚未启动，准备对首个基准值进行左右扫描分区。";
+        partitionDisplayContainer.appendChild(placeholder);
+        return;
+      }
+      
+      const size = part.length;
+      const barMaxWidth = size <= 6 ? "110px" : size <= 10 ? "85px" : "60px";
+      const barGap = size <= 6 ? "24px" : size <= 10 ? "16px" : "10px";
+      partitionDisplayContainer.style.gap = barGap;
+
+      const minHeightPct = size <= 6 ? 20 : size <= 10 ? 16 : 10;
+      const maxHeightPct = size <= 6 ? 94 : size <= 10 ? 92 : 90;
+
+      // Get sorted copy from the INITIAL array to ensure stable absolute ranks
+      const sortedVals = activeTimeline ? [...activeTimeline.initialArray].sort((x, y) => x - y) : [...part].sort((x, y) => x - y);
+
+      part.forEach((val, idx) => {
+        const bar = document.createElement("div");
+        bar.className = "bar";
+        bar.style.maxWidth = barMaxWidth;
+        
+        // Use default gradient or specific ones
+        bar.style.background = "linear-gradient(to top, var(--accent-primary) 0%, var(--accent-secondary) 100%)";
+
+        const rank = sortedVals.indexOf(val);
+        const heightPct = minHeightPct + (rank / Math.max(1, size - 1)) * (maxHeightPct - minHeightPct);
+        bar.style.height = `${heightPct}%`;
+
+        // Highlight states in partition
+        const isPivot = idx === step.partPivot;
+        const isComparing = step.partCompares && step.partCompares.includes(idx);
+        const isSwapping = step.partSwaps && step.partSwaps.includes(idx);
+        const isPointerI = step.partPointers && step.partPointers.i === idx;
+        const isPointerJ = step.partPointers && step.partPointers.j === idx;
+
+        if (isPivot) {
+          bar.classList.add("pivot");
+        } else if (isSwapping) {
+          bar.classList.add("swapping");
+        } else if (isComparing) {
+          bar.classList.add("comparing");
+        }
+
+        // Pointer label badge i or j
+        if (isPointerI || isPointerJ) {
+          const ptrLabel = document.createElement("div");
+          ptrLabel.className = "bar-key-badge";
+          ptrLabel.style.background = isPointerI ? "var(--accent-primary)" : "var(--accent-secondary)";
+          ptrLabel.innerHTML = isPointerI && isPointerJ ? "i,j" : (isPointerI ? "i" : "j");
+          ptrLabel.style.top = "-24px";
+          ptrLabel.style.animation = "none"; // static label
+          bar.appendChild(ptrLabel);
+        }
+
+        // Value text
+        const text = document.createElement("span");
+        text.className = "bar-value";
+        text.innerText = val;
+        if (size <= 6) {
+          text.style.fontSize = "1.05rem";
+          text.style.marginBottom = "0.6rem";
+        } else if (size <= 10) {
+          text.style.fontSize = "0.95rem";
+          text.style.marginBottom = "0.5rem";
+        } else {
+          text.style.fontSize = "0.85rem";
+        }
+        bar.appendChild(text);
+
+        // Index label
+        const idxLabel = document.createElement("span");
+        idxLabel.className = "bar-index";
+        idxLabel.innerText = idx;
+        if (size <= 6) {
+          idxLabel.style.fontSize = "1rem";
+          idxLabel.style.bottom = "-2rem";
+        } else if (size <= 10) {
+          idxLabel.style.fontSize = "0.9rem";
+          idxLabel.style.bottom = "-1.8rem";
+        } else {
+          idxLabel.style.fontSize = "0.8rem";
+          idxLabel.style.bottom = "-1.6rem";
+        }
+        bar.appendChild(idxLabel);
+
+        partitionDisplayContainer.appendChild(bar);
+      });
+    }
+
+    // Render SVG Heap Tree
+    function renderHeapTree(step) {
+      heapTreeContainer.innerHTML = `
+        <defs>
+          <linearGradient id="normal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#6366f1" />
+            <stop offset="100%" stop-color="#4f46e5" />
+          </linearGradient>
+          <linearGradient id="compare-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#d97706" />
+          </linearGradient>
+          <linearGradient id="swap-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f43f5e" />
+            <stop offset="100%" stop-color="#dc2626" />
+          </linearGradient>
+          <linearGradient id="sink-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#22d3ee" />
+            <stop offset="100%" stop-color="#0891b2" />
+          </linearGradient>
+        </defs>
+      `;
+
+      const arr = step.array;
+      const n = arr.length;
+      const heapSize = step.heapActiveSize !== -1 ? step.heapActiveSize : n;
+
+      if (n === 0) return;
+
+      const width = heapTreeContainer.clientWidth || 700;
+      const height = heapTreeContainer.clientHeight || 240;
+      const paddingY = 32;
+      const paddingX = 40;
+
+      const maxDepth = Math.floor(Math.log2(n));
+      const levelHeight = maxDepth > 0 ? (height - 2 * paddingY) / maxDepth : 0;
+
+      // Coordinate helper
+      function getCoords(index) {
+        const depth = Math.floor(Math.log2(index + 1));
+        const levelStart = Math.pow(2, depth) - 1;
+        const col = index - levelStart;
+        const totalCols = Math.pow(2, depth);
+        
+        const x = paddingX + (col + 0.5) * (width - 2 * paddingX) / totalCols;
+        const y = paddingY + depth * levelHeight;
+        return { x, y };
+      }
+
+      // Draw Lines
+      for (let i = 0; i < n; i++) {
+        const parentCoords = getCoords(i);
+        const left = 2 * i + 1;
+        const right = 2 * i + 2;
+
+        [left, right].forEach(childIdx => {
+          if (childIdx < n) {
+            const childCoords = getCoords(childIdx);
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", parentCoords.x);
+            line.setAttribute("y1", parentCoords.y);
+            line.setAttribute("x2", childCoords.x);
+            line.setAttribute("y2", childCoords.y);
+
+            const activeLink = i < heapSize && childIdx < heapSize;
+            if (activeLink) {
+              line.setAttribute("stroke", "rgba(79, 70, 229, 0.35)");
+              line.setAttribute("stroke-width", "2");
+            } else {
+              line.setAttribute("stroke", "rgba(0, 0, 0, 0.08)");
+              line.setAttribute("stroke-width", "1.5");
+              line.setAttribute("stroke-dasharray", "4,4");
+            }
+            heapTreeContainer.appendChild(line);
+          }
+        });
+      }
+
+      // Draw Nodes
+      for (let i = 0; i < n; i++) {
+        const coords = getCoords(i);
+        const value = arr[i];
+        const inHeap = i < heapSize;
+
+        let fill = "url(#normal-grad)";
+        let stroke = "rgba(99, 102, 241, 0.8)";
+        let textColor = "#f8fafc";
+        let nodeClass = "node-normal";
+        let isGlow = false;
+
+        if (!inHeap) {
+          nodeClass = "node-sorted";
+          fill = "#f1f5f9";
+          stroke = "rgba(5, 150, 105, 0.4)";
+          textColor = "var(--text-muted)";
+        } else if (step.swaps.includes(i)) {
+          nodeClass = "node-swap";
+          fill = "url(#swap-grad)";
+          stroke = "#dc2626";
+          isGlow = true;
+        } else if (step.heapCompare.includes(i)) {
+          nodeClass = "node-compare";
+          fill = "url(#compare-grad)";
+          stroke = "#d97706";
+          isGlow = true;
+        } else if (i === step.heapSinkRoot) {
+          nodeClass = "node-sink";
+          fill = "url(#sink-grad)";
+          stroke = "#0891b2";
+          isGlow = true;
+        }
+
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        group.setAttribute("class", nodeClass);
+
+        // Glow ring
+        if (isGlow) {
+          const glow = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          glow.setAttribute("cx", coords.x);
+          glow.setAttribute("cy", coords.y);
+          glow.setAttribute("r", "20");
+          glow.setAttribute("fill", "none");
+          glow.setAttribute("stroke", stroke);
+          glow.setAttribute("stroke-width", "3");
+          glow.setAttribute("opacity", "0.3");
+          group.appendChild(glow);
+        }
+
+        // Main circle
+        const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        circle.setAttribute("cx", coords.x);
+        circle.setAttribute("cy", coords.y);
+        circle.setAttribute("r", "15");
+        circle.setAttribute("fill", fill);
+        circle.setAttribute("stroke", stroke);
+        circle.setAttribute("stroke-width", "2");
+        group.appendChild(circle);
+
+        // Value
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", coords.x);
+        text.setAttribute("y", coords.y + 4);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute('fill', textColor);
+        text.setAttribute('font-size', '11px');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = value;
+        group.appendChild(text);
+
+        // Node index label
+        const indexLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        indexLabel.setAttribute("x", coords.x);
+        indexLabel.setAttribute("y", coords.y - 19);
+        indexLabel.setAttribute("text-anchor", "middle");
+        indexLabel.setAttribute('fill', inHeap ? "rgba(0, 0, 0, 0.45)" : "rgba(0, 0, 0, 0.2)");
+        indexLabel.setAttribute('font-size', '8px');
+        indexLabel.setAttribute('font-family', 'var(--font-mono)');
+        indexLabel.textContent = `[${i}]`;
+        group.appendChild(indexLabel);
+
+        heapTreeContainer.appendChild(group);
+      }
+    }
+
+    // Refresh UI with current playback index state
+    function updatePlaybackUI() {
+      if (!activeTimeline) return;
+      const step = activeTimeline.steps[playbackIndex];
+      const maxSteps = activeTimeline.steps.length - 1;
+
+      // Render graphics
+      renderArrayBars(step);
+      if (selectedAlgo.id === "heap") {
+        renderHeapTree(step);
+      }
+
+      // Render Aux Container (Visible for merge sort)
+      if (selectedAlgo.id === "merge") {
+        auxContainerBox.classList.remove("hidden");
+        renderAuxBars(step);
+      } else {
+        auxContainerBox.classList.add("hidden");
+      }
+
+      // Render Partition Container (Visible for quick sort)
+      if (selectedAlgo.id === "quick") {
+        partitionContainerBox.classList.remove("hidden");
+        renderPartitionBars(step);
+      } else {
+        partitionContainerBox.classList.add("hidden");
+      }
+
+      // Update text details
+      consoleMsg.innerText = step.message;
+      statCompares.innerText = step.stats.comparisons;
+      statSwaps.innerText = step.stats.swaps + step.stats.writes;
+      
+      // Update scrub slider
+      timelineScrub.max = maxSteps;
+      timelineScrub.value = playbackIndex;
+      stepCountLabel.innerText = `${playbackIndex} / ${maxSteps}`;
+      
+      // Lock/Unlock buttons
+      btnPrev.disabled = playbackIndex === 0;
+      btnReset.disabled = playbackIndex === 0;
+      btnNext.disabled = playbackIndex === maxSteps;
+    }
+
+    // Playback Loops
+    function startPlayback() {
+      if (isPlaying) return;
+      
+      const maxSteps = activeTimeline.steps.length - 1;
+      if (playbackIndex >= maxSteps) {
+        playbackIndex = 0; // wrap around on start
+      }
+      
+      isPlaying = true;
+      playIcon.innerHTML = `<path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>`; // Pause icon
+      runPlaybackLoop();
+    }
+
+    function pausePlayback() {
+      if (!isPlaying) return;
+      isPlaying = false;
+      playIcon.innerHTML = `<path d="M8 5v14l11-7z"/>`; // Play icon
+      if (playTimer) {
+        clearTimeout(playTimer);
+        playTimer = null;
+      }
+    }
+
+    function runPlaybackLoop() {
+      if (!isPlaying) return;
+      const maxSteps = activeTimeline.steps.length - 1;
+
+      if (playbackIndex < maxSteps) {
+        playbackIndex++;
+        updatePlaybackUI();
+        playTimer = setTimeout(runPlaybackLoop, speedMs);
+      } else {
+        pausePlayback();
+      }
+    }
+
+    // Actions
+    function stepForward() {
+      pausePlayback();
+      const maxSteps = activeTimeline.steps.length - 1;
+      if (playbackIndex < maxSteps) {
+        playbackIndex++;
+        updatePlaybackUI();
+      }
+    }
+
+    function stepBackward() {
+      pausePlayback();
+      if (playbackIndex > 0) {
+        playbackIndex--;
+        updatePlaybackUI();
+      }
+    }
+
+    function resetPlayback() {
+      pausePlayback();
+      playbackIndex = 0;
+      updatePlaybackUI();
+    }
+
+    // Manual Input Validation
+    function applyManualInput() {
+      const value = manualInput.value;
+      const elements = value.split(",")
+        .map(el => el.trim())
+        .filter(el => el !== "")
+        .map(Number);
+
+      if (elements.some(isNaN)) {
+        showError("输入的数组包含非数字元素，请检查。");
+        return;
+      }
+      if (elements.length < 3) {
+        showError("数组长度必须至少包含 3 个元素。");
+        return;
+      }
+      if (elements.length > 16) {
+        showError("为保证最佳视觉呈现，手动输入最多支持 16 个元素。");
+        return;
+      }
+      
+      // Uniqueness constraint check
+      const uniqueSet = new Set(elements);
+      if (uniqueSet.size !== elements.length) {
+        showError("根据说明，数组元素值必须唯一（Keys are unique）。");
+        return;
+      }
+
+      // Successful validation
+      clearError();
+      currentArray = elements;
+      arraySizeInput.value = elements.length;
+      sizeValLabel.innerText = elements.length;
+      
+      calculateTimeline();
+      showToast("成功导入自定义数据数组！");
+    }
+
+    function showError(msg) {
+      inputError.innerText = msg;
+      inputError.classList.remove("hidden");
+    }
+
+    function clearError() {
+      inputError.innerText = "";
+      inputError.classList.add("hidden");
+    }
+
+    // Toast feedback
+    function showToast(msg) {
+      toastText.innerText = msg;
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 2500);
+    }
+
+    // ----------------------------------------------------
+    // 5. Event Listeners Registration
+    // ----------------------------------------------------
+    function registerEvents() {
+      // Preset Selector
+      arrayPreset.addEventListener("change", () => {
+        generatePresetArray();
+        showToast("排列规则已重置");
+      });
+
+      // Size slider
+      arraySizeInput.addEventListener("input", (e) => {
+        const val = e.target.value;
+        sizeValLabel.innerText = val;
+        generatePresetArray();
+      });
+
+      // Speed slider
+      playbackSpeed.addEventListener("input", (e) => {
+        const val = parseInt(e.target.value);
+        speedMs = val;
+        speedValLabel.innerText = `${val}ms`;
+      });
+
+      // Buttons
+      generateBtn.addEventListener("click", () => {
+        generatePresetArray();
+        showToast("已生成新排列数组");
+      });
+
+      applyManualBtn.addEventListener("click", applyManualInput);
+      manualInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") applyManualInput();
+      });
+
+      // Playback Controls
+      btnPlay.addEventListener("click", () => {
+        if (isPlaying) pausePlayback();
+        else startPlayback();
+      });
+      btnReset.addEventListener("click", resetPlayback);
+      btnPrev.addEventListener("click", stepBackward);
+      btnNext.addEventListener("click", stepForward);
+
+      // Scrub Timeline Slider
+      timelineScrub.addEventListener("input", (e) => {
+        pausePlayback();
+        playbackIndex = parseInt(e.target.value);
+        updatePlaybackUI();
+      });
+
+      // Handle Resize for SVG Scaling
+      window.addEventListener("resize", () => {
+        if (selectedAlgo.id === "heap" && activeTimeline) {
+          renderHeapTree(activeTimeline.steps[playbackIndex]);
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // 6. Application Bootstrap
+    // ----------------------------------------------------
+    document.addEventListener("DOMContentLoaded", () => {
+      initAlgoList();
+      generatePresetArray();
+      registerEvents();
+    });
+  </script>
+</body>
+</html>
