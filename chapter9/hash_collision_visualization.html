@@ -1,0 +1,2529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>哈希冲突演示与 ASL 计算器 (考研 408 标准)</title>
+    
+    <!-- Premium Typography and Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* CSS Variables - Dual Theme Architecture */
+        :root {
+            /* Light Theme (Default) */
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-card-hover: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #475569;
+            --text-dark: #64748b;
+            
+            --accent-primary: #4f46e5;
+            --accent-primary-glow: rgba(79, 70, 229, 0.12);
+            --accent-success: #059669;
+            --accent-success-glow: rgba(5, 150, 105, 0.12);
+            --accent-warning: #d97706;
+            --accent-warning-glow: rgba(217, 119, 6, 0.15);
+            --accent-danger: #e11d48;
+            --accent-danger-glow: rgba(225, 29, 72, 0.12);
+            
+            --border-color: rgba(15, 23, 42, 0.08);
+            --border-color-hover: rgba(15, 23, 42, 0.15);
+            --transition-speed: 0.25s;
+            
+            --card-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
+            --block-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+            
+            --node-bg: #e2e8f0;
+            --node-text: #0f172a;
+            --node-border: #cbd5e1;
+        }
+
+        body.dark-theme {
+            /* Dark Theme */
+            --bg-primary: #080c16;
+            --bg-secondary: #0f1626;
+            --bg-card: #151f32;
+            --bg-card-hover: #1b273d;
+            --text-main: #f1f5f9;
+            --text-muted: #94a3b8;
+            --text-dark: #64748b;
+            
+            --accent-primary: #6366f1;
+            --accent-primary-glow: rgba(99, 102, 241, 0.25);
+            --accent-success: #10b981;
+            --accent-success-glow: rgba(16, 185, 129, 0.25);
+            --accent-warning: #f59e0b;
+            --accent-warning-glow: rgba(245, 158, 11, 0.3);
+            --accent-danger: #f43f5e;
+            --accent-danger-glow: rgba(244, 63, 94, 0.25);
+            
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-color-hover: rgba(255, 255, 255, 0.15);
+            
+            --card-shadow: none;
+            --block-shadow: none;
+            
+            --node-bg: #1e293b;
+            --node-text: #f1f5f9;
+            --node-border: #334155;
+        }
+
+        /* Reset and Base Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-primary);
+            background-image: 
+                radial-gradient(circle at 10% 20%, var(--accent-primary-glow) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, var(--accent-success-glow) 0%, transparent 40%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            line-height: 1.5;
+            display: flex;
+            flex-direction: column;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1.5rem 2rem;
+            background-color: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: var(--block-shadow);
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .header-logo svg {
+            width: 2.25rem;
+            height: 2.25rem;
+            fill: var(--accent-primary);
+        }
+
+        .header-title-container {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-success));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            margin-top: 0.1rem;
+        }
+
+        .theme-toggle-btn {
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.6rem;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            box-shadow: var(--block-shadow);
+        }
+
+        .theme-toggle-btn:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: scale(1.05);
+        }
+
+        .theme-toggle-btn svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        .theme-toggle-btn .sun-icon {
+            display: none;
+        }
+
+        body.dark-theme .theme-toggle-btn .sun-icon {
+            display: block;
+        }
+
+        body.dark-theme .theme-toggle-btn .moon-icon {
+            display: none;
+        }
+
+        /* Layout Architecture */
+        .app-container {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            flex-grow: 1;
+            overflow: hidden;
+            height: calc(100vh - 75px);
+        }
+
+        @media (max-width: 1024px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                height: auto;
+                overflow: visible;
+            }
+        }
+
+        /* Sidebar Styling */
+        .sidebar {
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 0.4rem;
+        }
+
+        .card-title svg {
+            width: 1rem;
+            height: 1rem;
+            color: var(--accent-primary);
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .form-group label {
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .input-control {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.55rem 0.75rem;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .input-control:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 3px var(--accent-primary-glow);
+        }
+
+        .btn {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            border: none;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 2px 4px rgba(79, 70, 229, 0.15);
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-primary);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            box-shadow: var(--block-shadow);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+        }
+
+        .btn-danger {
+            background-color: var(--accent-danger);
+            box-shadow: 0 2px 4px rgba(225, 29, 72, 0.15);
+        }
+
+        .btn-success {
+            background-color: var(--accent-success);
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.15);
+        }
+
+        .btn-full {
+            width: 100%;
+        }
+
+        .btn-group-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.5rem;
+        }
+
+        /* Radio Toggle Switch */
+        .radio-toggle-container {
+            display: flex;
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.25rem;
+        }
+
+        .radio-toggle-item {
+            flex: 1;
+            text-align: center;
+        }
+
+        .radio-toggle-item input {
+            display: none;
+        }
+
+        .radio-toggle-item label {
+            display: block;
+            padding: 0.4rem 0.5rem;
+            font-size: 0.8rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            color: var(--text-muted);
+        }
+
+        .radio-toggle-item input:checked + label {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            box-shadow: var(--block-shadow);
+        }
+
+        /* Speed Control */
+        .speed-slider-container {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .speed-slider-container input {
+            flex-grow: 1;
+            accent-color: var(--accent-primary);
+            cursor: pointer;
+        }
+
+        .speed-val {
+            font-size: 0.8rem;
+            font-family: 'Fira Code', monospace;
+            min-width: 45px;
+            text-align: right;
+            color: var(--text-muted);
+        }
+
+        /* Queue Elements Visual */
+        .queue-box {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+            padding: 0.75rem;
+            background-color: var(--bg-primary);
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            min-height: 50px;
+            max-height: 120px;
+            overflow-y: auto;
+        }
+
+        .queue-item {
+            background-color: var(--node-bg);
+            color: var(--node-text);
+            border: 1px solid var(--node-border);
+            font-family: 'Fira Code', monospace;
+            padding: 0.2rem 0.5rem;
+            font-size: 0.85rem;
+            border-radius: 4px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .queue-item.active {
+            background-color: var(--accent-primary-glow);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            transform: scale(1.1);
+        }
+
+        .queue-item.done {
+            opacity: 0.4;
+            text-decoration: line-through;
+        }
+
+        /* Main Workspace Styling */
+        .workspace {
+            padding: 1.5rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        /* Visualization Columns */
+        .visualizer-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        .viz-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+            transition: border-color var(--transition-speed);
+        }
+
+        .viz-card:hover {
+            border-color: var(--border-color-hover);
+        }
+
+        .viz-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.75rem;
+        }
+
+        .viz-title {
+            font-size: 1.15rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .viz-title-badge {
+            font-size: 0.75rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 99px;
+            font-weight: 600;
+        }
+
+        .badge-chaining {
+            background-color: var(--accent-primary-glow);
+            color: var(--accent-primary);
+        }
+
+        .badge-probing {
+            background-color: var(--accent-success-glow);
+            color: var(--accent-success);
+        }
+
+        /* ASL Indicator Boxes */
+        .asl-panel {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 0.75rem;
+        }
+
+        .asl-box {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+        }
+
+        .asl-box-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+        }
+
+        .asl-box-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+            color: var(--accent-primary);
+        }
+
+        .asl-box-formula {
+            font-size: 0.7rem;
+            color: var(--text-dark);
+            margin-top: 0.15rem;
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Scrollable Table Views */
+        .table-view-container {
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            background-color: var(--bg-primary);
+            max-height: 400px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Separate Chaining Visuals */
+        .chaining-table {
+            display: flex;
+            flex-direction: column;
+            padding: 0.5rem;
+            gap: 0.5rem;
+            width: 100%;
+        }
+
+        .chaining-row {
+            display: flex;
+            align-items: center;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.5rem;
+            transition: all 0.2s;
+        }
+
+        .chaining-row.probing-active {
+            border-color: var(--accent-warning);
+            background-color: var(--accent-warning-glow);
+            box-shadow: 0 0 10px var(--accent-warning-glow);
+        }
+
+        .chaining-row.probing-success {
+            border-color: var(--accent-success);
+            background-color: var(--accent-success-glow);
+            box-shadow: 0 0 10px var(--accent-success-glow);
+        }
+
+        .chaining-index-cell {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            font-family: 'Fira Code', monospace;
+            font-weight: 600;
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            margin-right: 0.75rem;
+        }
+
+        .chain-nodes-list {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            overflow-x: auto;
+            flex-grow: 1;
+            scrollbar-width: none; /* Hide scrollbar for Chrome/Safari compatibility */
+        }
+
+        .chain-nodes-list::-webkit-scrollbar {
+            display: none;
+        }
+
+        .chain-node-box {
+            display: flex;
+            align-items: center;
+            background-color: var(--node-bg);
+            border: 1px solid var(--node-border);
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            overflow: hidden;
+            font-size: 0.85rem;
+            box-shadow: var(--block-shadow);
+            animation: nodePop 0.3s ease-out;
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .chain-node-box.highlight {
+            border-color: var(--accent-warning);
+            background-color: var(--accent-warning-glow);
+            color: var(--accent-warning);
+            transform: scale(1.05);
+        }
+
+        .chain-node-box.matched {
+            border-color: var(--accent-success);
+            background-color: var(--accent-success-glow);
+            color: var(--accent-success);
+            transform: scale(1.08);
+        }
+
+        .chain-node-val {
+            padding: 0.35rem 0.6rem;
+            font-weight: 700;
+            color: var(--node-text);
+        }
+
+        .chain-node-pointer {
+            border-left: 1px solid var(--node-border);
+            padding: 0.35rem 0.4rem;
+            background-color: rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-dark);
+        }
+
+        .chain-arrow {
+            color: var(--text-dark);
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .chain-null {
+            color: var(--text-dark);
+            font-size: 0.75rem;
+            font-family: 'Fira Code', monospace;
+            font-weight: 500;
+            font-style: italic;
+            opacity: 0.6;
+            padding: 0.25rem 0.5rem;
+            flex-shrink: 0;
+        }
+
+        /* Linear Probing Visuals */
+        .probing-table-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+            gap: 0.6rem;
+            padding: 0.85rem;
+        }
+
+        .probing-cell {
+            background-color: var(--bg-secondary);
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            aspect-ratio: 1 / 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 0.4rem;
+            position: relative;
+            transition: all 0.25s;
+        }
+
+        .probing-cell.occupied {
+            border-style: solid;
+            border-color: var(--border-color);
+            box-shadow: var(--block-shadow);
+        }
+
+        .probing-cell.active-probe {
+            border-color: var(--accent-warning) !important;
+            background-color: var(--accent-warning-glow) !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px var(--accent-warning-glow);
+            z-index: 2;
+        }
+
+        .probing-cell.success-probe {
+            border-color: var(--accent-success) !important;
+            background-color: var(--accent-success-glow) !important;
+            transform: scale(1.08);
+            box-shadow: 0 0 12px var(--accent-success-glow);
+            z-index: 2;
+        }
+
+        .probing-cell.danger-probe {
+            border-color: var(--accent-danger) !important;
+            background-color: var(--accent-danger-glow) !important;
+            transform: scale(1.05);
+            box-shadow: 0 0 10px var(--accent-danger-glow);
+            z-index: 2;
+        }
+
+        .cell-idx {
+            font-size: 0.7rem;
+            font-family: 'Fira Code', monospace;
+            color: var(--text-dark);
+            font-weight: 500;
+        }
+
+        .cell-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            font-family: 'Fira Code', monospace;
+            color: var(--text-main);
+            flex-grow: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cell-empty-text {
+            font-size: 0.75rem;
+            color: var(--text-dark);
+            font-style: italic;
+            opacity: 0.5;
+        }
+
+        .cell-subinfo {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.6rem;
+            color: var(--text-dark);
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Execution Logger */
+        .logger-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.25rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .logger-console {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            max-height: 180px;
+            overflow-y: auto;
+            color: var(--text-muted);
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .log-entry {
+            display: flex;
+            gap: 0.5rem;
+            border-bottom: 1px dashed rgba(0,0,0,0.03);
+            padding-bottom: 0.15rem;
+            animation: logFade 0.2s ease-in;
+        }
+
+        body.dark-theme .log-entry {
+            border-bottom-color: rgba(255,255,255,0.03);
+        }
+
+        .log-time {
+            color: var(--text-dark);
+            font-weight: 500;
+            flex-shrink: 0;
+        }
+
+        .log-msg {
+            color: var(--text-main);
+        }
+
+        .log-msg.highlight-in {
+            color: var(--accent-primary);
+            font-weight: 500;
+        }
+
+        .log-msg.highlight-col {
+            color: var(--accent-danger);
+        }
+
+        .log-msg.highlight-ok {
+            color: var(--accent-success);
+            font-weight: 500;
+        }
+
+        /* Detail Tables (ASL calculations details) */
+        .details-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.5rem;
+        }
+
+        /* Main visualizer tabs styling */
+        .main-tabs {
+            display: flex;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 0.35rem;
+            gap: 0.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: var(--block-shadow);
+        }
+
+        .main-tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 0.75rem 1.25rem;
+            cursor: pointer;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .main-tab-btn svg {
+            width: 1.15rem;
+            height: 1.15rem;
+            transition: stroke 0.25s;
+        }
+
+        .main-tab-btn:hover {
+            color: var(--accent-primary);
+            background-color: var(--bg-primary);
+        }
+
+        .main-tab-btn.active {
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            box-shadow: var(--block-shadow);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .unreachable-row {
+            opacity: 0.35;
+            background-color: rgba(0, 0, 0, 0.04) !important;
+            border-style: dashed !important;
+            pointer-events: none;
+        }
+        
+        body.dark-theme .unreachable-row {
+            background-color: rgba(255, 255, 255, 0.02) !important;
+        }
+
+        .unreachable-warning-banner {
+            background-color: var(--accent-warning-glow);
+            border: 1px solid var(--accent-warning);
+            color: var(--accent-warning);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+            animation: nodePop 0.3s ease-out;
+        }
+
+        .details-card {
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: var(--card-shadow);
+        }
+
+        .details-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+            gap: 1rem;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-weight: 500;
+            padding: 0.5rem 0.25rem;
+            cursor: pointer;
+            position: relative;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+        }
+
+        .tab-btn:hover {
+            color: var(--accent-primary);
+        }
+
+        .tab-btn.active {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .tab-btn.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background-color: var(--accent-primary);
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+            animation: tabFadeIn 0.3s ease;
+        }
+
+        .details-table-wrapper {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+
+        .details-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+            text-align: left;
+        }
+
+        .details-table th, .details-table td {
+            padding: 0.6rem 0.85rem;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .details-table th {
+            background-color: var(--bg-primary);
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .details-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .details-table tbody tr:hover {
+            background-color: var(--bg-primary);
+        }
+
+        .math-block {
+            background-color: var(--bg-primary);
+            border-left: 3px solid var(--accent-primary);
+            padding: 0.75rem;
+            border-radius: 0 8px 8px 0;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+            line-height: 1.6;
+        }
+
+        .math-title {
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 0.25rem;
+            font-family: inherit;
+        }
+
+        /* Help Info Tooltip Styles */
+        .tooltip-container {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: help;
+            color: var(--text-dark);
+            margin-left: 0.25rem;
+            position: relative;
+        }
+
+        .tooltip-container svg {
+            width: 0.85rem;
+            height: 0.85rem;
+        }
+
+        .tooltip-content {
+            visibility: hidden;
+            width: 250px;
+            background-color: var(--bg-card);
+            color: var(--text-main);
+            border: 1px solid var(--border-color-hover);
+            text-align: left;
+            border-radius: 8px;
+            padding: 0.75rem;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            font-weight: normal;
+        }
+
+        .tooltip-container:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .flying-element {
+            position: absolute;
+            background-color: var(--accent-primary);
+            color: #ffffff;
+            border-radius: 6px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.9rem;
+            font-weight: 700;
+            padding: 0.35rem 0.6rem;
+            pointer-events: none;
+            z-index: 9999;
+            box-shadow: 0 4px 12px var(--accent-primary-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 35px;
+            height: 30px;
+        }
+
+        /* Animations */
+        @keyframes nodePop {
+            0% {
+                transform: scale(0.6);
+                opacity: 0;
+            }
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes logFade {
+            0% {
+                opacity: 0;
+                transform: translateY(4px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes tabFadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Math markup styling */
+        .math-eq {
+            color: var(--accent-primary);
+            font-weight: 600;
+        }
+
+        .formula-card {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 0.85rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        /* Math formatters */
+        .fraction {
+            display: inline-flex;
+            flex-direction: column;
+            vertical-align: middle;
+            text-align: center;
+            line-height: 1;
+            padding: 0 0.15rem;
+        }
+        .fraction .numerator {
+            border-bottom: 1px solid var(--text-main);
+            padding-bottom: 2px;
+            margin-bottom: 2px;
+        }
+        .fraction .denominator {
+            padding-top: 1px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Header Section -->
+    <header>
+        <div class="header-logo">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z"/>
+            </svg>
+            <div class="header-title-container">
+                <h1 class="header-title">哈希冲突与 ASL 可视化计算器</h1>
+                <span class="header-subtitle">拉链法 (Separate Chaining) & 线性探测法 (Linear Probing) 408考研标准仿真对比</span>
+            </div>
+        </div>
+        
+        <button class="theme-toggle-btn" id="themeToggle" title="切换深色/浅色主题">
+            <!-- Moon Icon (Dark Mode Trigger) -->
+            <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+            <!-- Sun Icon (Light Mode Trigger) -->
+            <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="5"></circle>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+        </button>
+    </header>
+
+    <!-- App Main Container -->
+    <div class="app-container">
+        
+        <!-- Sidebar Controls -->
+        <aside class="sidebar">
+            <!-- Parameter Config Card -->
+            <div>
+                <h2 class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    参数设置
+                </h2>
+                
+                <div class="form-group">
+                    <label for="presetSelect">预设方案</label>
+                    <select id="presetSelect" class="input-control">
+                        <option value="preset2010">2010年408真题 (H(key)=(key*3)%7, m=10)</option>
+                        <option value="preset2018">2018年408真题 (H(key)=key%7, m=7)</option>
+                        <option value="preset2019" selected>2019年408真题 (H(key)=key%7, m=11)</option>
+                        <option value="presetChaining">拉链法经典例题 (H(key)=key%11, m=11)</option>
+                        <option value="custom">自定义数据...</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="tableSizeM">表长 m</label>
+                        <input type="number" id="tableSizeM" class="input-control" value="11" min="3" max="30">
+                    </div>
+                    <div class="form-group">
+                        <label for="hashModP">哈希模数 p</label>
+                        <input type="number" id="hashModP" class="input-control" value="7" min="2" max="30">
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="hashA">系数 a</label>
+                        <input type="number" id="hashA" class="input-control" value="1" min="1" max="10">
+                    </div>
+                    <div class="form-group">
+                        <label for="hashB">常量 b</label>
+                        <input type="number" id="hashB" class="input-control" value="0" min="0" max="10">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>哈希函数: <span class="math-eq" id="hashMathDisplay">H(key) = key % 7</span></label>
+                </div>
+
+                <div class="form-group">
+                    <label>ASL 失败分母选择 
+                        <span class="tooltip-container">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                            <span class="tooltip-content">
+                                408考研真题标准中，查找失败的平均查找长度（ASL）是针对哈希函数能产生的哈希地址进行等概率计算，故分母取<b>哈希模数 p</b>。<br><br>部分传统教材（如某些旧版教材）中，查找失败分母使用<b>表长 m</b>计算。这里提供切换，方便对照。
+                            </span>
+                        </span>
+                    </label>
+                    <div class="radio-toggle-container">
+                        <div class="radio-toggle-item">
+                            <input type="radio" id="divP" name="aslDiv" value="p" checked>
+                            <label for="divP">模数 p (408标准)</label>
+                        </div>
+                        <div class="radio-toggle-item">
+                            <input type="radio" id="divM" name="aslDiv" value="m">
+                            <label for="divM">表长 m</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Elements Queue Card -->
+            <div>
+                <h2 class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                    待插入元素
+                </h2>
+                <div class="form-group">
+                    <input type="text" id="elementsInput" class="input-control" value="87, 40, 30, 6, 11, 22, 98, 20" placeholder="英文逗号分隔的整数列表">
+                </div>
+                <div class="btn-group-row" style="margin-bottom: 0.85rem;">
+                    <button class="btn btn-secondary" id="randomElementsBtn" title="随机生成新的元素">随机生成</button>
+                    <button class="btn btn-secondary" id="applyConfigBtn" title="应用参数并清空哈希表">应用/重置</button>
+                </div>
+                <div class="queue-box" id="queueContainer">
+                    <!-- Dynamic queue items -->
+                </div>
+            </div>
+
+            <!-- Controller Panel -->
+            <div>
+                <h2 class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                    播放控制
+                </h2>
+                <div class="form-group" style="gap: 0.75rem;">
+                    <button class="btn btn-full btn-success" id="stepBtn" title="单步插入当前元素">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/></svg>
+                        单步插入
+                    </button>
+                    <button class="btn btn-full" id="playAllBtn" title="一次性插入所有剩余元素">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        一键插入
+                    </button>
+                    <button class="btn btn-full btn-danger" id="resetBtn" title="清空哈希表，保留当前元素列表">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
+                        重置状态
+                    </button>
+                </div>
+                <div class="form-group">
+                    <label>演示速度</label>
+                    <div class="speed-slider-container">
+                        <input type="range" id="speedRange" min="200" max="2000" step="100" value="800">
+                        <span class="speed-val" id="speedVal">0.8s</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Simulation Card -->
+            <div>
+                <h2 class="card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    交互式查找测试
+                </h2>
+                <div class="form-group" style="flex-direction: row; gap: 0.5rem; margin-bottom:0;">
+                    <input type="number" id="searchInput" class="input-control" style="flex-grow: 1;" placeholder="输入数字">
+                    <button class="btn btn-success" id="searchBtn">查找</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="workspace">
+            
+            <!-- Tab Switcher -->
+            <div class="main-tabs">
+                <button class="main-tab-btn active" data-tab="chaining" onclick="switchMainTab('chaining')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                    拉链法 (Separate Chaining)
+                </button>
+                <button class="main-tab-btn" data-tab="probing" onclick="switchMainTab('probing')">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                    线性探测法 (Linear Probing)
+                </button>
+            </div>
+            
+            <!-- Visualizers -->
+            <div class="visualizer-grid">
+                
+                <!-- Separate Chaining Viz -->
+                <div class="viz-card" id="chainingCard">
+                    <div class="viz-card-header">
+                        <h2 class="viz-title">
+                            拉链法 (链地址法)
+                            <span class="viz-title-badge badge-chaining">Separate Chaining</span>
+                        </h2>
+                    </div>
+                    
+                    <!-- Chaining ASL Metrics -->
+                    <div class="asl-panel">
+                        <div class="asl-box">
+                            <span class="asl-box-label">装填因子 &alpha;</span>
+                            <span class="asl-box-val" id="chainingAlpha">0.00</span>
+                            <span class="asl-box-formula" id="chainingAlphaFormula">n / m = 0 / 11</span>
+                        </div>
+                        <div class="asl-box">
+                            <span class="asl-box-label">查找成功 ASL <sub>成功</sub></span>
+                            <span class="asl-box-val" id="chainingSuccessAsl">0.00</span>
+                            <span class="asl-box-formula" id="chainingSuccessFormula">-</span>
+                        </div>
+                        <div class="asl-box">
+                            <span class="asl-box-label">查找失败 ASL <sub>失败</sub></span>
+                            <span class="asl-box-val" id="chainingFailureAsl">0.00</span>
+                            <span class="asl-box-formula" id="chainingFailureFormula">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Table View -->
+                    <div class="table-view-container">
+                        <div class="chaining-table" id="chainingTableContainer">
+                            <!-- Dynamic rows representing indices and chains -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Linear Probing Viz -->
+                <div class="viz-card" id="probingCard">
+                    <div class="viz-card-header">
+                        <h2 class="viz-title">
+                            线性探测法 (开放定址法)
+                            <span class="viz-title-badge badge-probing">Linear Probing</span>
+                        </h2>
+                    </div>
+                    
+                    <!-- Probing ASL Metrics -->
+                    <div class="asl-panel">
+                        <div class="asl-box">
+                            <span class="asl-box-label">装填因子 &alpha;</span>
+                            <span class="asl-box-val" id="probingAlpha">0.00</span>
+                            <span class="asl-box-formula" id="probingAlphaFormula">n / m = 0 / 11</span>
+                        </div>
+                        <div class="asl-box">
+                            <span class="asl-box-label">查找成功 ASL <sub>成功</sub></span>
+                            <span class="asl-box-val" id="probingSuccessAsl">0.00</span>
+                            <span class="asl-box-formula" id="probingSuccessFormula">-</span>
+                        </div>
+                        <div class="asl-box">
+                            <span class="asl-box-label">查找失败 ASL <sub>失败</sub></span>
+                            <span class="asl-box-val" id="probingFailureAsl">0.00</span>
+                            <span class="asl-box-formula" id="probingFailureFormula">-</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Table View -->
+                    <div class="table-view-container" style="display: flex; flex-direction: column;">
+                        <div class="probing-table-grid" id="probingTableContainer">
+                            <!-- Dynamic grid cells representing indices -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Logger -->
+            <div class="logger-card">
+                <h2 class="card-title" style="border:none; margin:0; padding:0 0 0.5rem 0;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+                    操作运行控制台
+                </h2>
+                <div class="logger-console" id="consoleLogger">
+                    <div class="log-entry"><span class="log-time">[系统初始化]</span> <span class="log-msg">哈希表仿真器加载成功。等待输入或选择预设方案。</span></div>
+                </div>
+            </div>
+
+            <!-- ASL Math Breakdown Panel -->
+            <div class="details-grid">
+                
+                <!-- Chaining Math -->
+                <div class="details-card" id="chainingDetailsCard">
+                    <h2 class="card-title">拉链法 ASL 计算公式与步骤</h2>
+                    
+                    <div class="details-tabs">
+                        <button class="tab-btn active" onclick="switchTab('chainSuccess', this)">成功查找步骤</button>
+                        <button class="tab-btn" onclick="switchTab('chainFailure', this)">失败查找步骤</button>
+                    </div>
+
+                    <!-- Chaining Success Tab -->
+                    <div id="tab-chainSuccess" class="tab-pane active">
+                        <div class="math-block">
+                            <div class="math-title">计算公式：</div>
+                            ASL<sub>成功</sub> = <div class="fraction"><span class="numerator">&sum; (每个键的链表深度)</span><span class="denominator">当前插入的关键字个数 (n)</span></div>
+                        </div>
+                        <div class="details-table-wrapper">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>元素 key</th>
+                                        <th>初始 Hash H(key)</th>
+                                        <th>所处链表位置 (1-based)</th>
+                                        <th>比较次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chainSuccessBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Chaining Failure Tab -->
+                    <div id="tab-chainFailure" class="tab-pane">
+                        <div class="math-block">
+                            <div class="math-title">计算公式：</div>
+                            ASL<sub>失败</sub> = <div class="fraction"><span class="numerator">&sum; (对应散列地址下的链表长度)</span><span class="denominator">参与计算的散列地址个数 (divisor)</span></div>
+                        </div>
+                        <div class="formula-card">
+                            <b>考研 408 说明：</b>对于 H(key) = key % p 的情况，查找失败的初始散列位置只能落在 [0, p-1] 中。
+                            因此，只累计 slots [0, p-1] 的链表长度，除数 divisor 为 p。<br>
+                            如果是传统教材定义，则累计 slots [0, m-1] 的长度，除数 divisor 为表长 m。
+                        </div>
+                        <div class="details-table-wrapper">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>初始 Hash</th>
+                                        <th>该槽对应链表长度</th>
+                                        <th>失败判定比较次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="chainFailureBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Probing Math -->
+                <div class="details-card" id="probingDetailsCard">
+                    <h2 class="card-title">线性探测法 ASL 计算公式与步骤</h2>
+                    
+                    <div class="details-tabs">
+                        <button class="tab-btn active" onclick="switchTab('probeSuccess', this)">成功查找步骤</button>
+                        <button class="tab-btn" onclick="switchTab('probeFailure', this)">失败查找步骤</button>
+                    </div>
+
+                    <!-- Probing Success Tab -->
+                    <div id="tab-probeSuccess" class="tab-pane active">
+                        <div class="math-block">
+                            <div class="math-title">计算公式：</div>
+                            ASL<sub>成功</sub> = <div class="fraction"><span class="numerator">&sum; (每个键插入时的探测次数)</span><span class="denominator">当前插入的关键字个数 (n)</span></div>
+                        </div>
+                        <div class="details-table-wrapper">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>元素 key</th>
+                                        <th>初始 Hash</th>
+                                        <th>最终插入槽位</th>
+                                        <th>探测比较路径</th>
+                                        <th>探测次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="probeSuccessBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Probing Failure Tab -->
+                    <div id="tab-probeFailure" class="tab-pane">
+                        <div class="math-block">
+                            <div class="math-title">计算公式：</div>
+                            ASL<sub>失败</sub> = <div class="fraction"><span class="numerator">&sum; (从初始地址探测到空槽的比较次数)</span><span class="denominator">参与计算的散列地址个数 (divisor)</span></div>
+                        </div>
+                        <div class="formula-card">
+                            <b>算法解析：</b>对于每个可能的初始哈希地址，在查找一个表中不存在的元素时，从该地址出发线性向后探测，<b>直到碰见第一个空槽（Null）</b>方能确认查找失败。该过程经历的探测节点数（包括最后的空槽）即为该地址的失败比较次数。
+                        </div>
+                        <div class="details-table-wrapper">
+                            <table class="details-table">
+                                <thead>
+                                    <tr>
+                                        <th>初始 Hash</th>
+                                        <th>线性探测路径 (直到空槽)</th>
+                                        <th>探测比较次数</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="probeFailureBody">
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Script Block -->
+    <script>
+        // --- State Management ---
+        let m = 11;
+        let p = 7;
+        let a = 1;
+        let b = 0;
+        let inputKeys = [];
+        let pendingKeys = [];
+        let insertedKeys = [];
+        
+        // Structures representing the current hash tables
+        let chainingTable = []; // Array of arrays: [ [key1, key2], [], [key3] ]
+        let probingTable = [];  // Array of objects/nulls: [ {key: val, startHash: h, probes: count}, null ]
+        
+        let aslDenominator = 'p'; // 'p' or 'm'
+        let animationSpeed = 800; // ms
+        let playIntervalId = null;
+        let isPlayingAll = false;
+        let isAnimating = false;
+        let activeMainTab = 'chaining'; // 'chaining' or 'probing'
+
+        // --- DOM Elements ---
+        const themeToggle = document.getElementById('themeToggle');
+        const presetSelect = document.getElementById('presetSelect');
+        const tableSizeMInput = document.getElementById('tableSizeM');
+        const hashModPInput = document.getElementById('hashModP');
+        const hashAInput = document.getElementById('hashA');
+        const hashBInput = document.getElementById('hashB');
+        const hashMathDisplay = document.getElementById('hashMathDisplay');
+        const elementsInput = document.getElementById('elementsInput');
+        const randomElementsBtn = document.getElementById('randomElementsBtn');
+        const applyConfigBtn = document.getElementById('applyConfigBtn');
+        const queueContainer = document.getElementById('queueContainer');
+        const stepBtn = document.getElementById('stepBtn');
+        const playAllBtn = document.getElementById('playAllBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const speedRange = document.getElementById('speedRange');
+        const speedVal = document.getElementById('speedVal');
+        const searchInput = document.getElementById('searchInput');
+        const searchBtn = document.getElementById('searchBtn');
+        const consoleLogger = document.getElementById('consoleLogger');
+
+        const divPRadio = document.getElementById('divP');
+        const divMRadio = document.getElementById('divM');
+
+        // Chaining DOM updates
+        const chainingSuccessAsl = document.getElementById('chainingSuccessAsl');
+        const chainingSuccessFormula = document.getElementById('chainingSuccessFormula');
+        const chainingFailureAsl = document.getElementById('chainingFailureAsl');
+        const chainingFailureFormula = document.getElementById('chainingFailureFormula');
+        const chainingTableContainer = document.getElementById('chainingTableContainer');
+        const chainSuccessBody = document.getElementById('chainSuccessBody');
+        const chainFailureBody = document.getElementById('chainFailureBody');
+
+        // Probing DOM updates
+        const probingSuccessAsl = document.getElementById('probingSuccessAsl');
+        const probingSuccessFormula = document.getElementById('probingSuccessFormula');
+        const probingFailureAsl = document.getElementById('probingFailureAsl');
+        const probingFailureFormula = document.getElementById('probingFailureFormula');
+        const probingTableContainer = document.getElementById('probingTableContainer');
+        const probeSuccessBody = document.getElementById('probeSuccessBody');
+        const probeFailureBody = document.getElementById('probeFailureBody');
+
+        // --- Initial Config Setup ---
+        const presets = {
+            preset2010: { m: 10, p: 7, a: 3, b: 0, keys: [7, 8, 30, 11, 18, 9, 14], div: 'p' },
+            preset2018: { m: 7, p: 7, a: 1, b: 0, keys: [22, 43, 15], div: 'p' },
+            preset2019: { m: 11, p: 7, a: 1, b: 0, keys: [87, 40, 30, 6, 11, 22, 98, 20], div: 'p' },
+            presetChaining: { m: 11, p: 11, a: 1, b: 0, keys: [19, 14, 23, 1, 68, 20, 84, 27, 55, 11, 10], div: 'p' }
+        };
+
+        // --- Event Listeners ---
+        themeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-theme');
+            localStorage.setItem('theme', document.body.classList.contains('dark-theme') ? 'dark' : 'light');
+        });
+
+        // Initialize Theme from LocalStorage
+        if (localStorage.getItem('theme') === 'dark') {
+            document.body.classList.add('dark-theme');
+        }
+
+        presetSelect.addEventListener('change', loadPreset);
+        applyConfigBtn.addEventListener('click', handleApplyConfig);
+        randomElementsBtn.addEventListener('click', generateRandomKeys);
+        resetBtn.addEventListener('click', resetTables);
+        stepBtn.addEventListener('click', handleSingleStep);
+        playAllBtn.addEventListener('click', togglePlayAll);
+        searchBtn.addEventListener('click', triggerSearchSimulation);
+        speedRange.addEventListener('input', (e) => {
+            animationSpeed = parseInt(e.target.value);
+            speedVal.textContent = (animationSpeed / 1000).toFixed(1) + 's';
+        });
+
+        divPRadio.addEventListener('change', () => { aslDenominator = 'p'; recalculateASL(); });
+        divMRadio.addEventListener('change', () => { aslDenominator = 'm'; recalculateASL(); });
+
+        // Input sync validations
+        tableSizeMInput.addEventListener('change', () => {
+            const mVal = parseInt(tableSizeMInput.value);
+            const pVal = parseInt(hashModPInput.value);
+            if (pVal > mVal) {
+                hashModPInput.value = mVal;
+            }
+            hashModPInput.max = mVal;
+            updateHashFormulaDisplay();
+        });
+
+        hashModPInput.addEventListener('change', () => {
+            const mVal = parseInt(tableSizeMInput.value);
+            let pVal = parseInt(hashModPInput.value);
+            if (pVal > mVal) {
+                pVal = mVal;
+                hashModPInput.value = mVal;
+            }
+            updateHashFormulaDisplay();
+        });
+
+        hashAInput.addEventListener('change', updateHashFormulaDisplay);
+        hashBInput.addEventListener('change', updateHashFormulaDisplay);
+
+        // --- Core Functions ---
+
+        function updateHashFormulaDisplay() {
+            const av = parseInt(hashAInput.value);
+            const bv = parseInt(hashBInput.value);
+            const pv = parseInt(hashModPInput.value);
+            let term = "key";
+            if (av !== 1) term = `key &times; ${av}`;
+            if (bv !== 0) term = `(${term} + ${bv})`;
+            hashMathDisplay.innerHTML = `H(key) = ${term} mod ${pv}`;
+        }
+
+        function loadPreset() {
+            const presetKey = presetSelect.value;
+            if (presetKey === 'custom') return;
+            
+            const config = presets[presetKey];
+            tableSizeMInput.value = config.m;
+            hashModPInput.value = config.p;
+            hashAInput.value = config.a;
+            hashBInput.value = config.b;
+            elementsInput.value = config.keys.join(', ');
+            
+            if (config.div === 'p') {
+                divPRadio.checked = true;
+                aslDenominator = 'p';
+            } else {
+                divMRadio.checked = true;
+                aslDenominator = 'm';
+            }
+
+            updateHashFormulaDisplay();
+            handleApplyConfig();
+            logMsg("系统消息", `已加载预设方案: ${presetSelect.options[presetSelect.selectedIndex].text}`, "highlight-in");
+        }
+
+        function parseElements() {
+            const raw = elementsInput.value;
+            const parsed = raw.split(',')
+                             .map(s => parseInt(s.trim()))
+                             .filter(n => !isNaN(n));
+            
+            // Remove duplicates for cleaner visualizer operations (standard hash tables usually store unique keys)
+            const unique = [...new Set(parsed)];
+            if (unique.length < parsed.length) {
+                logMsg("系统警告", "检测到输入元素中包含重复项，已自动去重以保证演示清晰度。", "highlight-col");
+            }
+            return unique;
+        }
+
+        function generateRandomKeys() {
+            const count = Math.floor(Math.random() * 5) + 6; // 6 to 10 keys
+            const randoms = [];
+            while(randoms.length < count) {
+                const k = Math.floor(Math.random() * 95) + 5; // 5 to 99
+                if(!randoms.includes(k)) {
+                    randoms.push(k);
+                }
+            }
+            elementsInput.value = randoms.join(', ');
+            presetSelect.value = 'custom';
+            handleApplyConfig();
+            logMsg("随机生成", `随机生成了 ${count} 个不同的数字。`, "highlight-in");
+        }
+
+        function handleApplyConfig() {
+            // Stop any ongoing play
+            stopPlayback();
+
+            m = parseInt(tableSizeMInput.value);
+            p = parseInt(hashModPInput.value);
+            a = parseInt(hashAInput.value);
+            b = parseInt(hashBInput.value);
+
+            if (p > m) {
+                alert("根据哈希表构造要求，哈希模数 p 不应大于表长 m！已自动调整为表长值。");
+                p = m;
+                hashModPInput.value = m;
+            }
+
+            inputKeys = parseElements();
+            resetTables();
+        }
+
+        function resetTables() {
+            stopPlayback();
+            
+            insertedKeys = [];
+            pendingKeys = [...inputKeys];
+
+            // Reconstruct tables
+            chainingTable = Array.from({ length: m }, () => []);
+            probingTable = Array(m).fill(null);
+
+            // Re-render components
+            renderQueue();
+            renderChainingTable();
+            renderProbingTable();
+            recalculateASL();
+            clearLogs();
+            
+            logMsg("重置成功", `散列表状态已初始化。表长 m = ${m}, 模数 p = ${p}。当前空表等待插入。`);
+        }
+
+        // Calculate H(key)
+        function hashFunction(key) {
+            return (key * a + b) % p;
+        }
+
+        // --- Render Helpers ---
+
+        function renderQueue() {
+            queueContainer.innerHTML = '';
+            inputKeys.forEach((key, idx) => {
+                const badge = document.createElement('span');
+                badge.className = 'queue-item';
+                badge.textContent = key;
+                badge.id = `q-item-${idx}`;
+                
+                const doneCount = insertedKeys.length;
+                if (idx < doneCount) {
+                    badge.classList.add('done');
+                } else if (idx === doneCount && isAnimating) {
+                    badge.classList.add('active');
+                }
+                queueContainer.appendChild(badge);
+            });
+        }
+
+        function renderChainingTable() {
+            chainingTableContainer.innerHTML = '';
+            
+            // If p < m, we can show a warning banner at the top of the table container
+            if (p < m) {
+                const banner = document.createElement('div');
+                banner.className = 'unreachable-warning-banner';
+                banner.innerHTML = `⚠️ <b>拉链法不适用警告：</b>模数 p (${p}) &lt; 表长 m (${m})。槽位 ${p} ~ ${m-1} 将永远无法被哈希映射而造成空间浪费，该无效区域已置灰。`;
+                chainingTableContainer.appendChild(banner);
+            }
+
+            for (let i = 0; i < m; i++) {
+                const row = document.createElement('div');
+                row.className = 'chaining-row';
+                row.id = `chaining-row-${i}`;
+
+                if (i >= p) {
+                    row.classList.add('unreachable-row');
+                }
+
+                const indexCell = document.createElement('div');
+                indexCell.className = 'chaining-index-cell';
+                indexCell.textContent = i;
+                row.appendChild(indexCell);
+
+                const listContainer = document.createElement('div');
+                listContainer.className = 'chain-nodes-list';
+                listContainer.id = `chaining-list-${i}`;
+
+                if (i >= p) {
+                    const unreachableLabel = document.createElement('span');
+                    unreachableLabel.className = 'chain-null';
+                    unreachableLabel.innerHTML = '<i>Unreachable (哈希无法映射)</i>';
+                    listContainer.appendChild(unreachableLabel);
+                } else {
+                    const bucketList = chainingTable[i];
+                    if (bucketList.length === 0) {
+                        const nullLabel = document.createElement('span');
+                        nullLabel.className = 'chain-null';
+                        nullLabel.textContent = '^ (NULL)';
+                        listContainer.appendChild(nullLabel);
+                    } else {
+                        bucketList.forEach((key, listIdx) => {
+                            // Create Node Block
+                            const nodeBox = document.createElement('div');
+                            nodeBox.className = 'chain-node-box';
+                            nodeBox.id = `chain-node-${i}-${listIdx}`;
+
+                            const valPart = document.createElement('div');
+                            valPart.className = 'chain-node-val';
+                            valPart.textContent = key;
+                            nodeBox.appendChild(valPart);
+
+                            const pointerPart = document.createElement('div');
+                            pointerPart.className = 'chain-node-pointer';
+                            pointerPart.textContent = '•';
+                            nodeBox.appendChild(pointerPart);
+
+                            listContainer.appendChild(nodeBox);
+
+                            // Draw an arrow if not the last node
+                            const arrow = document.createElement('span');
+                            arrow.className = 'chain-arrow';
+                            arrow.innerHTML = ' &rarr; ';
+                            listContainer.appendChild(arrow);
+                        });
+
+                        const nullLabel = document.createElement('span');
+                        nullLabel.className = 'chain-null';
+                        nullLabel.textContent = '^';
+                        listContainer.appendChild(nullLabel);
+                    }
+                }
+
+                row.appendChild(listContainer);
+                chainingTableContainer.appendChild(row);
+            }
+        }
+
+        function renderProbingTable() {
+            probingTableContainer.innerHTML = '';
+            
+            // Generate grid items
+            for (let i = 0; i < m; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'probing-cell';
+                cell.id = `probing-cell-${i}`;
+
+                const idxLabel = document.createElement('div');
+                idxLabel.className = 'cell-idx';
+                idxLabel.textContent = i;
+                cell.appendChild(idxLabel);
+
+                const cellVal = document.createElement('div');
+                cellVal.className = 'cell-val';
+                
+                const entry = probingTable[i];
+                if (entry === null) {
+                    cellVal.innerHTML = '<span class="cell-empty-text">Empty</span>';
+                    cell.appendChild(cellVal);
+
+                    const subInfo = document.createElement('div');
+                    subInfo.className = 'cell-subinfo';
+                    subInfo.innerHTML = '<span>-</span><span>-</span>';
+                    cell.appendChild(subInfo);
+                } else {
+                    cell.classList.add('occupied');
+                    cellVal.textContent = entry.key;
+                    cell.appendChild(cellVal);
+
+                    const subInfo = document.createElement('div');
+                    subInfo.className = 'cell-subinfo';
+                    subInfo.innerHTML = `<span>H:${entry.startHash}</span><span>P:${entry.probes}</span>`;
+                    cell.appendChild(subInfo);
+                }
+
+                probingTableContainer.appendChild(cell);
+            }
+        }
+
+        // --- Insertion Simulations ---
+
+        async function insertNextStep() {
+            if (pendingKeys.length === 0) return;
+
+            const key = pendingKeys.shift();
+            const doneCount = insertedKeys.length;
+            
+            // Highlight current in queue
+            renderQueue();
+            const activeBadge = document.getElementById(`q-item-${doneCount}`);
+            if (activeBadge) activeBadge.classList.add('active');
+
+            const hashVal = hashFunction(key);
+            logMsg("操作开始", `准备插入数字 ${key}，计算哈希: H(${key}) = (${key} &times; ${a} + ${b}) mod ${p} = ${hashVal}`, "highlight-in");
+
+            // Perform animations concurrently for visual pleasure
+            await Promise.all([
+                animateSeparateChainingInsert(key, hashVal),
+                animateLinearProbingInsert(key, hashVal)
+            ]);
+
+            insertedKeys.push(key);
+            renderQueue();
+            recalculateASL();
+        }
+
+        async function handleSingleStep() {
+            if (isAnimating) return;
+            if (pendingKeys.length === 0) {
+                logMsg("提示", "所有元素已在表中。点击应用/重置即可重新演练。");
+                return;
+            }
+            
+            isAnimating = true;
+            disableControls(true);
+            
+            await insertNextStep();
+            
+            isAnimating = false;
+            disableControls(false);
+
+            if (pendingKeys.length === 0) {
+                logMsg("仿真结束", "数据已全部录入完毕。可以在下方查看详细的 ASL 成功/失败 分析步骤。");
+            }
+        }
+
+        async function playAllLoop() {
+            isPlayingAll = true;
+            isAnimating = true;
+            disableControls(true);
+
+            while (isPlayingAll && pendingKeys.length > 0) {
+                await insertNextStep();
+                // Add a delay between insertions
+                await delay(500);
+            }
+
+            isPlayingAll = false;
+            isAnimating = false;
+            disableControls(false);
+
+            if (pendingKeys.length === 0) {
+                logMsg("仿真结束", "数据已全部录入完毕。可以在下方查看详细的 ASL 成功/失败 分析步骤。");
+                stopPlayback();
+            }
+        }
+
+        // Separate Chaining Insert & Anim
+        async function animateSeparateChainingInsert(key, hash) {
+            const list = chainingTable[hash];
+            const isActive = (activeMainTab === 'chaining');
+            
+            if (!isActive) {
+                list.push(key);
+                renderChainingTable();
+                logMsg("拉链法", `H(${key}) = ${hash}. 插入成功 (后台计算)。`, "highlight-ok");
+                return;
+            }
+
+            const row = document.getElementById(`chaining-row-${hash}`);
+            row.classList.add('probing-active');
+            
+            // 1. Spawn flyer at the active queue badge
+            const doneCount = insertedKeys.length;
+            const activeBadge = document.getElementById(`q-item-${doneCount}`) || document.getElementById('applyConfigBtn'); 
+            const srcRect = activeBadge.getBoundingClientRect();
+            
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-element';
+            flyer.textContent = key;
+            flyer.style.left = `${srcRect.left + window.scrollX}px`;
+            flyer.style.top = `${srcRect.top + window.scrollY}px`;
+            document.body.appendChild(flyer);
+            
+            // Force reflow
+            flyer.offsetHeight;
+            
+            // 2. Fly to index cell
+            const indexCell = row.querySelector('.chaining-index-cell');
+            const indexRect = indexCell.getBoundingClientRect();
+            
+            flyer.style.transition = `all ${animationSpeed * 0.5}ms cubic-bezier(0.25, 0.8, 0.25, 1)`;
+            flyer.style.left = `${indexRect.left + window.scrollX}px`;
+            flyer.style.top = `${indexRect.top + window.scrollY}px`;
+            
+            await delay(animationSpeed * 0.5);
+            
+            // 3. Traverse list nodes one by one
+            for (let i = 0; i < list.length; i++) {
+                // Highlight the current node we are comparing with
+                const nodeBox = document.getElementById(`chain-node-${hash}-${i}`);
+                if (nodeBox) {
+                    const nodeRect = nodeBox.getBoundingClientRect();
+                    // Move flyer to this node
+                    flyer.style.left = `${nodeRect.left + window.scrollX}px`;
+                    flyer.style.top = `${nodeRect.top + window.scrollY}px`;
+                    
+                    nodeBox.classList.add('highlight');
+                    logMsg("拉链对比", `在槽 ${hash} 的链表中，对比节点 [${list[i]}]`);
+                    await delay(animationSpeed * 0.5);
+                    nodeBox.classList.remove('highlight');
+                }
+            }
+            
+            // 4. Update the state and redraw table to show the new node
+            list.push(key);
+            renderChainingTable();
+            
+            // Remove the flyer
+            flyer.remove();
+            
+            // Highlight the newly inserted node
+            const newNodeIdx = list.length - 1;
+            const newNodeBox = document.getElementById(`chain-node-${hash}-${newNodeIdx}`);
+            if (newNodeBox) {
+                newNodeBox.classList.add('matched');
+                row.classList.remove('probing-active');
+                row.classList.add('probing-success');
+                
+                logMsg("拉链法", `H(${key}) = ${hash}. 插入成功，成为链表第 ${list.length} 个节点。比较次数：${list.length}次。`, "highlight-ok");
+                
+                await delay(animationSpeed * 0.5);
+                newNodeBox.classList.remove('matched');
+                row.classList.remove('probing-success');
+            }
+        }
+
+        // Linear Probing Insert & Anim
+        async function animateLinearProbingInsert(key, hash) {
+            const isActive = (activeMainTab === 'probing');
+            
+            if (!isActive) {
+                let probes = 0;
+                let pos = hash;
+                let success = false;
+                
+                while (probes < m) {
+                    probes++;
+                    if (probingTable[pos] === null) {
+                        probingTable[pos] = { key: key, startHash: hash, probes: probes };
+                        success = true;
+                        renderProbingTable();
+                        logMsg("线性探测", `探测槽 ${pos} 发现为空。存入元素 ${key}，总计探测了 ${probes} 次 (后台计算)。`, "highlight-ok");
+                        break;
+                    } else {
+                        logMsg("冲突发生", `探测槽 ${pos} 被已存元素 ${probingTable[pos].key} 占用，产生冲突。向后线性移动 (后台计算)。`, "highlight-col");
+                        pos = (pos + 1) % m;
+                    }
+                }
+                
+                if (!success) {
+                    logMsg("插入失败", `哈希表已满(表长为${m})，无法插入元素 ${key} (后台计算)。`, "highlight-col");
+                }
+                return;
+            }
+
+            let probes = 0;
+            let pos = hash;
+            let success = false;
+            
+            // 1. Spawn flyer
+            const doneCount = insertedKeys.length;
+            const activeBadge = document.getElementById(`q-item-${doneCount}`) || document.getElementById('applyConfigBtn');
+            const srcRect = activeBadge.getBoundingClientRect();
+            
+            const flyer = document.createElement('div');
+            flyer.className = 'flying-element';
+            flyer.style.backgroundColor = 'var(--accent-success)';
+            flyer.textContent = key;
+            flyer.style.left = `${srcRect.left + window.scrollX}px`;
+            flyer.style.top = `${srcRect.top + window.scrollY}px`;
+            document.body.appendChild(flyer);
+            
+            // Force reflow
+            flyer.offsetHeight;
+            
+            // Set transition
+            flyer.style.transition = `all ${animationSpeed * 0.5}ms cubic-bezier(0.25, 0.8, 0.25, 1)`;
+            
+            while (probes < m) {
+                probes++;
+                const cell = document.getElementById(`probing-cell-${pos}`);
+                const cellRect = cell.getBoundingClientRect();
+                
+                // Move flyer to the current probed cell
+                flyer.style.left = `${cellRect.left + window.scrollX}px`;
+                flyer.style.top = `${cellRect.top + window.scrollY}px`;
+                
+                // Wait for flyer to arrive
+                await delay(animationSpeed * 0.5);
+                
+                cell.classList.add('active-probe');
+                
+                if (probingTable[pos] === null) {
+                    // Slot is empty - Success!
+                    probingTable[pos] = { key: key, startHash: hash, probes: probes };
+                    success = true;
+                    
+                    logMsg("线性探测", `探测槽 ${pos} 发现为空。存入元素 ${key}，总计探测了 ${probes} 次。`, "highlight-ok");
+                    
+                    cell.classList.remove('active-probe');
+                    cell.classList.add('success-probe');
+                    
+                    renderProbingTable();
+                    flyer.remove();
+                    
+                    await delay(animationSpeed * 0.6);
+                    const cellNew = document.getElementById(`probing-cell-${pos}`);
+                    if (cellNew) cellNew.classList.remove('success-probe');
+                    break;
+                } else {
+                    // Slot is occupied - Collision!
+                    logMsg("冲突发生", `探测槽 ${pos} 被已存元素 ${probingTable[pos].key} 占用，产生冲突。准备向后线性移动。`, "highlight-col");
+                    
+                    cell.classList.remove('active-probe');
+                    cell.classList.add('danger-probe');
+                    
+                    await delay(animationSpeed * 0.4);
+                    cell.classList.remove('danger-probe');
+                    
+                    // Move to next cell wrapping around modulo m
+                    pos = (pos + 1) % m;
+                }
+            }
+            
+            if (!success) {
+                logMsg("插入失败", `哈希表已满(表长为${m})，无法插入元素 ${key}。`, "highlight-col");
+                flyer.remove();
+            }
+        }
+
+        // Recalculate and update the metrics panels
+        function recalculateASL() {
+            const n = insertedKeys.length;
+            const divisor = (aslDenominator === 'p') ? p : m;
+
+            // Recalculate Loading Factor (裝填因子 \alpha = n / m)
+            const alpha = n > 0 ? (n / m).toFixed(2) : "0.00";
+            
+            const chainingAlpha = document.getElementById('chainingAlpha');
+            const chainingAlphaFormula = document.getElementById('chainingAlphaFormula');
+            const probingAlpha = document.getElementById('probingAlpha');
+            const probingAlphaFormula = document.getElementById('probingAlphaFormula');
+            
+            if (chainingAlpha) {
+                chainingAlpha.textContent = alpha;
+                chainingAlphaFormula.textContent = `n / m = ${n} / ${m}`;
+            }
+            if (probingAlpha) {
+                probingAlpha.textContent = alpha;
+                probingAlphaFormula.textContent = `n / m = ${n} / ${m}`;
+            }
+
+            // --- 1. Separate Chaining Recalculation ---
+            let chainSuccessSum = 0;
+            let chainSuccessMathStr = "";
+            let chainSuccessRowsHtml = "";
+
+            insertedKeys.forEach((key) => {
+                const hash = hashFunction(key);
+                const list = chainingTable[hash];
+                const indexInList = list.indexOf(key) + 1; // 1-indexed deep
+                
+                chainSuccessSum += indexInList;
+                chainSuccessRowsHtml += `<tr>
+                    <td><b>${key}</b></td>
+                    <td>${hash}</td>
+                    <td>第 ${indexInList} 个节点</td>
+                    <td><span class="math-eq">${indexInList}</span></td>
+                </tr>`;
+            });
+
+            if (n > 0) {
+                const chainAslSucc = (chainSuccessSum / n).toFixed(2);
+                chainingSuccessAsl.textContent = chainAslSucc;
+                chainingSuccessFormula.innerHTML = `ASL<sub>成功</sub> = ${chainSuccessSum} / ${n} = ${chainAslSucc}`;
+                chainSuccessBody.innerHTML = chainSuccessRowsHtml;
+            } else {
+                chainingSuccessAsl.textContent = "0.00";
+                chainingSuccessFormula.textContent = "暂无元素";
+                chainSuccessBody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--text-dark);">暂无数据</td></tr>`;
+            }
+
+            // Failure calculations
+            let chainFailureSum = 0;
+            let chainFailureRowsHtml = "";
+            
+            // Loop up to divisor (either p or m)
+            for (let i = 0; i < divisor; i++) {
+                const len = i < m ? chainingTable[i].length : 0;
+                chainFailureSum += len;
+                chainFailureRowsHtml += `<tr>
+                    <td>散列位置 ${i}</td>
+                    <td>${len}</td>
+                    <td><span class="math-eq">${len}</span></td>
+                </tr>`;
+            }
+
+            const chainAslFail = (chainFailureSum / divisor).toFixed(2);
+            chainingFailureAsl.textContent = chainAslFail;
+            chainingFailureFormula.innerHTML = `ASL<sub>失败</sub> = ${chainFailureSum} / ${divisor} = ${chainAslFail}`;
+            chainFailureBody.innerHTML = chainFailureRowsHtml;
+
+
+            // --- 2. Linear Probing Recalculation ---
+            let probeSuccessSum = 0;
+            let probeSuccessRowsHtml = "";
+
+            // Evaluate probe counts for all inserted keys
+            insertedKeys.forEach((key) => {
+                // Find where the key ended up
+                let slot = -1;
+                for (let i = 0; i < m; i++) {
+                    if (probingTable[i] && probingTable[i].key === key) {
+                        slot = i;
+                        break;
+                    }
+                }
+
+                if (slot !== -1) {
+                    const entry = probingTable[slot];
+                    const startH = entry.startHash;
+                    const path = [];
+                    let curr = startH;
+                    while (curr !== slot) {
+                        path.push(curr);
+                        curr = (curr + 1) % m;
+                    }
+                    path.push(slot);
+
+                    probeSuccessSum += entry.probes;
+                    probeSuccessRowsHtml += `<tr>
+                        <td><b>${key}</b></td>
+                        <td>${startH}</td>
+                        <td>${slot}</td>
+                        <td>[${path.join(' &rarr; ')}]</td>
+                        <td><span class="math-eq">${entry.probes}</span></td>
+                    </tr>`;
+                }
+            });
+
+            if (n > 0) {
+                const probeAslSucc = (probeSuccessSum / n).toFixed(2);
+                probingSuccessAsl.textContent = probeAslSucc;
+                probingSuccessFormula.innerHTML = `ASL<sub>成功</sub> = ${probeSuccessSum} / ${n} = ${probeAslSucc}`;
+                probeSuccessBody.innerHTML = probeSuccessRowsHtml;
+            } else {
+                probingSuccessAsl.textContent = "0.00";
+                probingSuccessFormula.textContent = "暂无元素";
+                probeSuccessBody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--text-dark);">暂无数据</td></tr>`;
+            }
+
+            // Linear Probing Failure Calculations
+            let probeFailureSum = 0;
+            let probeFailureRowsHtml = "";
+
+            for (let i = 0; i < divisor; i++) {
+                let probes = 0;
+                let curr = i;
+                const path = [];
+                
+                while (probes < m) {
+                    probes++;
+                    path.push(curr);
+                    if (probingTable[curr] === null) {
+                        break;
+                    }
+                    curr = (curr + 1) % m;
+                }
+
+                probeFailureSum += probes;
+                probeFailureRowsHtml += `<tr>
+                    <td>初始 Hash ${i}</td>
+                    <td>[${path.join(' &rarr; ')}]</td>
+                    <td><span class="math-eq">${probes}</span></td>
+                </tr>`;
+            }
+
+            const probeAslFail = (probeFailureSum / divisor).toFixed(2);
+            probingFailureAsl.textContent = probeAslFail;
+            probingFailureFormula.innerHTML = `ASL<sub>失败</sub> = ${probeFailureSum} / ${divisor} = ${probeAslFail}`;
+            probeFailureBody.innerHTML = probeFailureRowsHtml;
+        }
+
+        // --- Search Simulation System ---
+
+        async function triggerSearchSimulation() {
+            const val = parseInt(searchInput.value);
+            if (isNaN(val)) {
+                alert("请输入有效的搜索整数！");
+                return;
+            }
+
+            stopPlayback();
+            disableControls(true);
+            isAnimating = true;
+
+            const startHash = hashFunction(val);
+            logMsg("查找测试", `准备查询键值 ${val}。初始散列位置：H(${val}) = ${startHash}`, "highlight-in");
+
+            // Execute concurrent search animations
+            await Promise.all([
+                simulateChainingSearch(val, startHash),
+                simulateProbingSearch(val, startHash)
+            ]);
+
+            disableControls(false);
+            isAnimating = false;
+        }
+
+        function simulateChainingSearch(key, hash) {
+            return new Promise(async (resolve) => {
+                const isActive = (activeMainTab === 'chaining');
+                if (!isActive) {
+                    resolve();
+                    return;
+                }
+
+                const row = document.getElementById(`chaining-row-${hash}`);
+                row.classList.add('probing-active');
+                
+                await delay(animationSpeed);
+                
+                const list = chainingTable[hash];
+                let found = false;
+                let probes = 0;
+
+                for (let i = 0; i < list.length; i++) {
+                    probes++;
+                    const nodeBox = document.getElementById(`chain-node-${hash}-${i}`);
+                    if (nodeBox) nodeBox.classList.add('highlight');
+                    
+                    logMsg("拉链查找", `检查链表 ${hash} 的第 ${probes} 个元素: ${list[i]}`);
+                    await delay(animationSpeed);
+                    
+                    if (list[i] === key) {
+                        found = true;
+                        if (nodeBox) {
+                            nodeBox.classList.remove('highlight');
+                            nodeBox.classList.add('matched');
+                        }
+                        logMsg("链地址法", `找到关键字 ${key}！比较次数：${probes} 次。`, "highlight-ok");
+                        break;
+                    }
+                    
+                    if (nodeBox) nodeBox.classList.remove('highlight');
+                }
+
+                if (!found) {
+                    row.classList.add('danger-probe');
+                    logMsg("链地址法", `未找到元素 ${key}。遍历完链表，共比较了 ${probes} 次。`, "highlight-col");
+                }
+
+                await delay(animationSpeed * 1.5);
+                renderChainingTable();
+                resolve();
+            });
+        }
+
+        function simulateProbingSearch(key, hash) {
+            return new Promise(async (resolve) => {
+                const isActive = (activeMainTab === 'probing');
+                if (!isActive) {
+                    resolve();
+                    return;
+                }
+
+                let probes = 0;
+                let pos = hash;
+                let found = false;
+
+                while (probes < m) {
+                    probes++;
+                    const cell = document.getElementById(`probing-cell-${pos}`);
+                    cell.classList.add('active-probe');
+                    
+                    logMsg("探测查找", `检查线性探测槽位 ${pos}`);
+                    await delay(animationSpeed);
+
+                    const entry = probingTable[pos];
+                    if (entry === null) {
+                        // Empty slot - element cannot exist
+                        cell.classList.remove('active-probe');
+                        cell.classList.add('danger-probe');
+                        logMsg("线性探测", `槽位 ${pos} 为空。查找失败，键 ${key} 不存在！比较次数：${probes} 次。`, "highlight-col");
+                        break;
+                    } else if (entry.key === key) {
+                        // Found!
+                        found = true;
+                        cell.classList.remove('active-probe');
+                        cell.classList.add('success-probe');
+                        logMsg("线性探测", `在槽位 ${pos} 成功匹配关键字 ${key}！比较次数：${probes} 次。`, "highlight-ok");
+                        break;
+                    } else {
+                        // Occupied by wrong key
+                        cell.classList.remove('active-probe');
+                        cell.classList.add('danger-probe');
+                        await delay(animationSpeed * 0.4);
+                        cell.classList.remove('danger-probe');
+                        pos = (pos + 1) % m;
+                    }
+                }
+
+                if (!found && probes === m) {
+                    logMsg("线性探测", `全表循环遍历完毕，仍未找到 ${key}。比较次数：${probes} 次。`, "highlight-col");
+                }
+
+                await delay(animationSpeed * 1.5);
+                // Clear colors
+                renderProbingTable();
+                resolve();
+            });
+        }
+
+        // --- Helper Routines ---
+
+        function togglePlayAll() {
+            if (isPlayingAll) {
+                stopPlayback();
+            } else {
+                if (pendingKeys.length === 0) {
+                    alert("无可插入元素，请添加待插入元素或重置！");
+                    return;
+                }
+                
+                stepBtn.disabled = true;
+                playAllBtn.innerHTML = `
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                    暂停运行
+                `;
+                playAllBtn.classList.remove('btn-success');
+                playAllBtn.classList.add('btn-danger');
+
+                playAllLoop();
+            }
+        }
+
+        function stopPlayback() {
+            isPlayingAll = false;
+            
+            playAllBtn.innerHTML = `
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                一键插入
+            `;
+            playAllBtn.classList.remove('btn-danger');
+            playAllBtn.classList.add('btn-success');
+            
+            disableControls(false);
+            renderQueue();
+        }
+
+        function disableControls(disable) {
+            stepBtn.disabled = disable;
+            applyConfigBtn.disabled = disable;
+            randomElementsBtn.disabled = disable;
+            resetBtn.disabled = disable;
+            searchBtn.disabled = disable;
+            presetSelect.disabled = disable;
+            tableSizeMInput.disabled = disable;
+            hashModPInput.disabled = disable;
+            hashAInput.disabled = disable;
+            hashBInput.disabled = disable;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // --- Logger Panel Helpers ---
+
+        function logMsg(tag, msg, styleClass = "") {
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `
+                <span class="log-time">[${time}]</span>
+                <span class="log-msg ${styleClass}"><b>${tag}:</b> ${msg}</span>
+            `;
+            consoleLogger.appendChild(entry);
+            consoleLogger.scrollTop = consoleLogger.scrollHeight;
+        }
+
+        function clearLogs() {
+            consoleLogger.innerHTML = '<div class="log-entry"><span class="log-time">[系统重置]</span> <span class="log-msg">哈希状态已清空。等待下一次演练。</span></div>';
+        }
+
+        // --- Tabs Management ---
+
+        window.switchTab = function(tabId, el) {
+            // Find parent of button to isolate within card
+            const card = el.closest('.details-card');
+            
+            // Deactivate all buttons in this specific tabbed area
+            const tabs = card.querySelectorAll('.tab-btn');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Deactivate all panes in this area
+            const panes = card.querySelectorAll('.tab-pane');
+            panes.forEach(pane => pane.classList.remove('active'));
+
+            // Activate chosen ones
+            el.classList.add('active');
+            card.querySelector(`#tab-${tabId}`).classList.add('active');
+        };
+
+        window.switchMainTab = function(tabName) {
+            activeMainTab = tabName;
+            
+            // Update tab buttons
+            document.querySelectorAll('.main-tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`.main-tab-btn[data-tab="${tabName}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+            
+            // Toggle visibility of cards
+            const chainingCard = document.getElementById('chainingCard');
+            const probingCard = document.getElementById('probingCard');
+            const chainingDetails = document.getElementById('chainingDetailsCard');
+            const probingDetails = document.getElementById('probingDetailsCard');
+            
+            if (tabName === 'chaining') {
+                chainingCard.classList.remove('hidden');
+                chainingDetails.classList.remove('hidden');
+                probingCard.classList.add('hidden');
+                probingDetails.classList.add('hidden');
+            } else {
+                chainingCard.classList.add('hidden');
+                chainingDetails.classList.add('hidden');
+                probingCard.classList.remove('hidden');
+                probingDetails.classList.remove('hidden');
+            }
+        };
+
+        // Initialize first run
+        loadPreset();
+        switchMainTab('chaining');
+
+    </script>
+</body>
+</html>
