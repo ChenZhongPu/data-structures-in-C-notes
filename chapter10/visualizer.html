@@ -1004,6 +1004,18 @@
               </svg>
             </div>
 
+            <!-- Merge Tree Structure Display (Visible only for bottom-up merge sort) -->
+            <div class="heap-container hidden" id="merge-tree-box">
+              <div class="heap-title-mini">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                自底向上归并合并树 (Merge Sort Tree)
+              </div>
+              <svg id="merge-tree-container" class="heap-tree-svg">
+              </svg>
+            </div>
+
             <!-- Aux Array Display (Visible only for merge sort during merge phase) -->
             <div class="heap-container hidden" id="aux-container-box">
               <div class="heap-title-mini">
@@ -1174,6 +1186,17 @@
         desc: "采用分治（Divide and Conquer）策略：将数组一分为二，递归对左右子数组进行归并排序，然后再利用一个辅助数组 aux，将两个已经有序的子区间双指针扫描合并回原数组。由于树的层数是 log N，每一层合并成本是 O(N)，总复杂度极其稳定。"
       },
       {
+        id: "merge-bu",
+        name: "Bottom-Up Merge Sort",
+        cname: "自底向上归并排序",
+        best: "O(N log N)",
+        worst: "O(N log N)",
+        avg: "O(N log N)",
+        space: "O(N)",
+        stable: "稳定",
+        desc: "自底向上归并排序。直接从长度为 1 的子序列开始两两合并，然后是长度为 2、4、8...的子序列，直到整个序列完全有序。合并树（Merge Tree）结构自底向上清晰展示了每个子区间合并的过程及其在合并前后的元素变化。"
+      },
+      {
         id: "quick",
         name: "Quick Sort",
         cname: "快速排序",
@@ -1182,7 +1205,7 @@
         avg: "O(N log N)",
         space: "O(log N)",
         stable: "不稳定",
-        desc: "分治策略的另一代表。选择首个元素作为 pivot 基准，通过双指针 i 和 j 双向扫描，将大于 pivot 的放右侧，小于 pivot 的放左侧，最终把基准归位。为契合简单化要求，本例中不包含随机 shuffle 操作，因此在完全有序或逆序数组上会退化为最坏的 O(N²) 复杂度。"
+        desc: "分治策略的另一代表。选择首个元素作为 pivot 基准，通过双指针 i 和 j 双向扫描，将大于 pivot 的放右侧，小于 pivot 的放左侧，最终把基准归位。为了更清晰展示分区（Partition）的核心机制，本演示仅展示第一次分区的具体扫描与交换过程，体现基准归位后‘左侧元素均小、右侧元素均大’的分布特征。"
       },
       {
         id: "heap",
@@ -1233,6 +1256,8 @@
           partPointers: state.partPointers ? { ...state.partPointers } : undefined,
           partCompares: state.partCompares ? [...state.partCompares] : undefined,
           partSwaps: state.partSwaps ? [...state.partSwaps] : undefined,
+          mergeActive: state.mergeActive ? { ...state.mergeActive } : undefined,
+          mergedIntervals: state.mergedIntervals ? new Set(state.mergedIntervals) : new Set(),
           message: state.message || "",
           stats: {
             comparisons: this.stats.comparisons,
@@ -1627,11 +1652,364 @@
       return timeline;
     }
 
+    function buildMergeTree(n) {
+      let nodes = [];
+      let nodeMap = {};
+      
+      for (let i = 0; i < n; i++) {
+        let node = { id: `node_${i}_${i}`, lo: i, hi: i, level: 0, children: [] };
+        nodes.push(node);
+        nodeMap[`${i}_${i}`] = node;
+      }
+
+      let activeIntervals = {};
+      for (let i = 0; i < n; i++) {
+        activeIntervals[`${i}_${i}`] = nodeMap[`${i}_${i}`];
+      }
+
+      let levelCounter = 1;
+      for (let sz = 1; sz < n; sz = sz + sz) {
+        for (let lo = 0; lo < n - sz; lo += sz + sz) {
+          let mid = lo + sz - 1;
+          let hi = Math.min(lo + sz + sz - 1, n - 1);
+          
+          let leftKey = null;
+          let rightKey = null;
+          
+          for (let key in activeIntervals) {
+            let [l, h] = key.split("_").map(Number);
+            if (l === lo && h === mid) leftKey = key;
+            if (l === mid + 1 && h === hi) rightKey = key;
+          }
+          
+          if (leftKey && rightKey) {
+            let leftNode = activeIntervals[leftKey];
+            let rightNode = activeIntervals[rightKey];
+            let parentLevel = Math.max(leftNode.level, rightNode.level) + 1;
+            
+            let parentNode = {
+              id: `node_${lo}_${hi}_sz${sz}`,
+              lo: lo,
+              hi: hi,
+              level: parentLevel,
+              children: [leftNode.id, rightNode.id]
+            };
+            
+            nodes.push(parentNode);
+            nodeMap[`${lo}_${hi}`] = parentNode;
+            
+            delete activeIntervals[leftKey];
+            delete activeIntervals[rightKey];
+            activeIntervals[`${lo}_${hi}`] = parentNode;
+          }
+        }
+        levelCounter++;
+      }
+      return nodes;
+    }
+
+    function compileMergeSortBU(arr) {
+      let timeline = new Timeline(arr);
+      let a = [...arr];
+      let n = a.length;
+      
+      let aux = new Array(n);
+      let mergedIntervals = new Set();
+      for (let i = 0; i < n; i++) {
+        mergedIntervals.add(`${i}_${i}`);
+      }
+
+      for (let sz = 1; sz < n; sz = sz + sz) {
+        for (let lo = 0; lo < n - sz; lo += sz + sz) {
+          let mid = lo + sz - 1;
+          let hi = Math.min(lo + sz + sz - 1, n - 1);
+          
+          timeline.addStep({
+            array: [...a],
+            activeRange: [lo, hi],
+            pivot: mid,
+            mergeActive: { lo, mid, hi, sz },
+            mergedIntervals: new Set(mergedIntervals),
+            message: `准备自底向上合并区间 a[${lo}..${mid}] 与 a[${mid+1}..${hi}]，当前合并大小 sz = ${sz}`
+          });
+          
+          for (let k = lo; k <= hi; k++) {
+            aux[k] = a[k];
+          }
+          timeline.stats.writes += (hi - lo + 1);
+          
+          timeline.addStep({
+            array: [...a],
+            auxArray: [...aux],
+            activeRange: [lo, hi],
+            pivot: mid,
+            mergeActive: { lo, mid, hi, sz },
+            mergedIntervals: new Set(mergedIntervals),
+            message: `将待合并子区间复制到辅助数组 aux[${lo}..${hi}]`
+          });
+          
+          let i = lo;
+          let j = mid + 1;
+          
+          for (let k = lo; k <= hi; k++) {
+            let compares = [];
+            if (i <= mid && j <= hi) {
+              compares = [i, j];
+              timeline.stats.comparisons++;
+              timeline.addStep({
+                array: [...a],
+                auxArray: [...aux],
+                auxCompares: [i, j],
+                auxPointers: { i, j },
+                pivot: k,
+                activeRange: [lo, hi],
+                mergeActive: { lo, mid, hi, sz },
+                mergedIntervals: new Set(mergedIntervals),
+                message: `比较辅助区间左指针 aux[${i}] (${aux[i]}) 与右指针 aux[${j}] (${aux[j]})`
+              });
+            }
+            
+            let valCopied = -1;
+            if (i > mid) {
+              valCopied = aux[j];
+              a[k] = aux[j];
+              j++;
+              timeline.stats.writes++;
+              timeline.addStep({
+                array: [...a],
+                auxArray: [...aux],
+                auxPointers: { i: -1, j: j <= hi ? j : -1 },
+                copies: [{ index: k, val: valCopied }],
+                activeRange: [lo, hi],
+                mergeActive: { lo, mid, hi, sz },
+                mergedIntervals: new Set(mergedIntervals),
+                message: `左半部分已用完。复制右侧元素 aux[${j-1}] (${valCopied}) 到 a[${k}]`
+              });
+            } else if (j > hi) {
+              valCopied = aux[i];
+              a[k] = aux[i];
+              i++;
+              timeline.stats.writes++;
+              timeline.addStep({
+                array: [...a],
+                auxArray: [...aux],
+                auxPointers: { i: i <= mid ? i : -1, j: -1 },
+                copies: [{ index: k, val: valCopied }],
+                activeRange: [lo, hi],
+                mergeActive: { lo, mid, hi, sz },
+                mergedIntervals: new Set(mergedIntervals),
+                message: `右半部分已用完。复制左侧元素 aux[${i-1}] (${valCopied}) 到 a[${k}]`
+              });
+            } else if (aux[j] < aux[i]) {
+              valCopied = aux[j];
+              a[k] = aux[j];
+              j++;
+              timeline.stats.writes++;
+              timeline.addStep({
+                array: [...a],
+                auxArray: [...aux],
+                auxPointers: { i: i <= mid ? i : -1, j: j <= hi ? j : -1 },
+                copies: [{ index: k, val: valCopied }],
+                activeRange: [lo, hi],
+                mergeActive: { lo, mid, hi, sz },
+                mergedIntervals: new Set(mergedIntervals),
+                message: `由于右侧 aux[${j-1}] (${valCopied}) 较小，复制到 a[${k}]`
+              });
+            } else {
+              valCopied = aux[i];
+              a[k] = aux[i];
+              i++;
+              timeline.stats.writes++;
+              timeline.addStep({
+                array: [...a],
+                auxArray: [...aux],
+                auxPointers: { i: i <= mid ? i : -1, j: j <= hi ? j : -1 },
+                copies: [{ index: k, val: valCopied }],
+                activeRange: [lo, hi],
+                mergeActive: { lo, mid, hi, sz },
+                mergedIntervals: new Set(mergedIntervals),
+                message: `由于左侧 aux[${i-1}] (${valCopied}) 较小/相等，复制到 a[${k}]`
+              });
+            }
+          }
+          
+          mergedIntervals.add(`${lo}_${hi}`);
+          
+          timeline.addStep({
+            array: [...a],
+            activeRange: [lo, hi],
+            mergedIntervals: new Set(mergedIntervals),
+            message: `区间 a[${lo}..${hi}] 自底向上合并完成，该子区间局部有序：[${a.slice(lo, hi+1).join(", ")}]`
+          });
+        }
+      }
+      
+      timeline.addStep({
+        array: [...a],
+        sorted: Array.from({ length: n }, (_, idx) => idx),
+        mergedIntervals: new Set(mergedIntervals),
+        message: "自底向上逐层归并全部完成，自底向上归并排序结束！"
+      });
+      
+      return timeline;
+    }
+
+    function renderMergeTree(step) {
+      mergeTreeContainer.innerHTML = `
+        <defs>
+          <linearGradient id="merge-normal-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="100%" stop-color="#f1f5f9" />
+          </linearGradient>
+          <linearGradient id="merge-active-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#f59e0b" />
+            <stop offset="100%" stop-color="#d97706" />
+          </linearGradient>
+          <linearGradient id="merge-sorted-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#34d399" />
+            <stop offset="100%" stop-color="#059669" />
+          </linearGradient>
+        </defs>
+      `;
+
+      if (!activeTimeline || !activeTimeline.mergeTreeNodes) return;
+      const nodes = activeTimeline.mergeTreeNodes;
+      const n = step.array.length;
+
+      const width = mergeTreeContainer.clientWidth || 700;
+      const height = mergeTreeContainer.clientHeight || 240;
+      const paddingY = 25;
+      const paddingX = 40;
+
+      const maxLevel = Math.max(...nodes.map(node => node.level));
+      const levelHeight = maxLevel > 0 ? (height - 2 * paddingY) / maxLevel : 0;
+
+      function getCoords(node) {
+        const avgIndex = (node.lo + node.hi) / 2;
+        const x = paddingX + (avgIndex / (n - 1 || 1)) * (width - 2 * paddingX);
+        const y = height - paddingY - node.level * levelHeight;
+        return { x, y };
+      }
+
+      nodes.forEach(node => {
+        if (node.children && node.children.length > 0) {
+          const parentCoords = getCoords(node);
+          node.children.forEach(childId => {
+            const childNode = nodes.find(n => n.id === childId);
+            if (childNode) {
+              const childCoords = getCoords(childNode);
+              const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+              line.setAttribute("x1", parentCoords.x);
+              line.setAttribute("y1", parentCoords.y);
+              line.setAttribute("x2", childCoords.x);
+              line.setAttribute("y2", childCoords.y);
+
+              const parentMerged = step.mergedIntervals && step.mergedIntervals.has(`${node.lo}_${node.hi}`);
+              const isActive = step.mergeActive && step.mergeActive.lo === node.lo && step.mergeActive.hi === node.hi;
+
+              if (parentMerged) {
+                line.setAttribute("stroke", "rgba(5, 150, 105, 0.4)");
+                line.setAttribute("stroke-width", "2.5");
+              } else if (isActive) {
+                line.setAttribute("stroke", "var(--color-compare)");
+                line.setAttribute("stroke-width", "3");
+              } else {
+                line.setAttribute("stroke", "rgba(0, 0, 0, 0.08)");
+                line.setAttribute("stroke-width", "1.5");
+                line.setAttribute("stroke-dasharray", "3,3");
+              }
+              mergeTreeContainer.appendChild(line);
+            }
+          });
+        }
+      });
+
+      nodes.forEach(node => {
+        const coords = getCoords(node);
+        const parentMerged = step.mergedIntervals && step.mergedIntervals.has(`${node.lo}_${node.hi}`);
+        const isActive = step.mergeActive && step.mergeActive.lo === node.lo && step.mergeActive.hi === node.hi;
+
+        let fill = "url(#merge-normal-grad)";
+        let stroke = "rgba(0, 0, 0, 0.15)";
+        let textColor = "var(--text-secondary)";
+        let isGlow = false;
+
+        if (parentMerged) {
+          fill = "url(#merge-sorted-grad)";
+          stroke = "rgba(5, 150, 105, 0.8)";
+          textColor = "#f8fafc";
+        } else if (isActive) {
+          fill = "url(#merge-active-grad)";
+          stroke = "var(--color-compare)";
+          textColor = "#f8fafc";
+          isGlow = true;
+        }
+
+        const span = node.hi - node.lo + 1;
+        const capsuleW = Math.max(32, span * 24);
+        const capsuleH = 22;
+
+        const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+
+        if (isGlow) {
+          const glow = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          glow.setAttribute("x", coords.x - capsuleW / 2 - 4);
+          glow.setAttribute("y", coords.y - capsuleH / 2 - 4);
+          glow.setAttribute("width", capsuleW + 8);
+          glow.setAttribute("height", capsuleH + 8);
+          glow.setAttribute("rx", "14");
+          glow.setAttribute("ry", "14");
+          glow.setAttribute("fill", "none");
+          glow.setAttribute("stroke", stroke);
+          glow.setAttribute("stroke-width", "4");
+          glow.setAttribute("opacity", "0.3");
+          glow.setAttribute("style", "animation: pulse-ring-orange 1.5s infinite;");
+          group.appendChild(glow);
+        }
+
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", coords.x - capsuleW / 2);
+        rect.setAttribute("y", coords.y - capsuleH / 2);
+        rect.setAttribute("width", capsuleW);
+        rect.setAttribute("height", capsuleH);
+        rect.setAttribute("rx", "11");
+        rect.setAttribute("ry", "11");
+        rect.setAttribute("fill", fill);
+        rect.setAttribute("stroke", stroke);
+        rect.setAttribute("stroke-width", "1.5");
+        group.appendChild(rect);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", coords.x);
+        text.setAttribute("y", coords.y + 4);
+        text.setAttribute("text-anchor", "middle");
+        text.setAttribute('fill', textColor);
+        text.setAttribute('font-size', '9px');
+        text.setAttribute('font-weight', '600');
+        text.setAttribute('font-family', 'var(--font-mono)');
+
+        const vals = step.array.slice(node.lo, node.hi + 1);
+        text.textContent = vals.join(" ");
+        group.appendChild(text);
+
+        const rangeLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        rangeLabel.setAttribute("x", coords.x);
+        rangeLabel.setAttribute("y", coords.y - 14);
+        rangeLabel.setAttribute("text-anchor", "middle");
+        rangeLabel.setAttribute('fill', parentMerged ? "rgba(5, 150, 105, 0.6)" : "rgba(0, 0, 0, 0.3)");
+        rangeLabel.setAttribute('font-size', '7.5px');
+        rangeLabel.setAttribute('font-family', 'var(--font-mono)');
+        rangeLabel.textContent = `[${node.lo}..${node.hi}]`;
+        group.appendChild(rangeLabel);
+
+        mergeTreeContainer.appendChild(group);
+      });
+    }
+
     function compileQuickSort(arr) {
       let timeline = new Timeline(arr);
       let a = [...arr];
       let n = a.length;
-      let sortedSet = new Set();
 
       // First partition (low = 0, high = n - 1)
       let pivot = a[0];
@@ -1728,7 +2106,6 @@
       let tempPivot = a[0];
       a[0] = a[j];
       a[j] = tempPivot;
-      sortedSet.add(j);
 
       timeline.addStep({
         array: a,
@@ -1739,53 +2116,8 @@
         activeRange: [0, n - 1],
         pivot: j,
         keyValue: tempPivot,
-        message: `将基准 a[0] (${tempPivot}) 与 a[${j}] (${a[0]}) 交换，基准归位，第一阶段扫描分区完成！`
-      });
-
-      // Now sort left and right silently
-      let p = j;
-      
-      // Sort left half [0..p-1] in one step
-      if (p - 1 > 0) {
-        let leftArr = a.slice(0, p).sort((x, y) => x - y);
-        for (let k = 0; k < p; k++) {
-          a[k] = leftArr[k];
-          sortedSet.add(k);
-        }
-        timeline.stats.writes += p;
-        timeline.addStep({
-          array: a,
-          activeRange: [0, p - 1],
-          sorted: Array.from(sortedSet),
-          message: `递归排序左半部分 a[0..${p - 1}] 一次性完成：结果为 [${leftArr.join(", ")}]`
-        });
-      } else if (p - 1 === 0) {
-        sortedSet.add(0);
-      }
-
-      // Sort right half [p+1..n-1] in one step
-      if (p + 1 < n - 1) {
-        let rightArr = a.slice(p + 1, n).sort((x, y) => x - y);
-        for (let k = p + 1; k < n; k++) {
-          a[k] = rightArr[k - (p + 1)];
-          sortedSet.add(k);
-        }
-        timeline.stats.writes += (n - (p + 1));
-        timeline.addStep({
-          array: a,
-          activeRange: [p + 1, n - 1],
-          sorted: Array.from(sortedSet),
-          message: `递归排序右半部分 a[${p + 1}..${n - 1}] 一次性完成：结果为 [${rightArr.join(", ")}]`
-        });
-      } else if (p + 1 === n - 1) {
-        sortedSet.add(n - 1);
-      }
-
-      // Final complete step
-      timeline.addStep({
-        array: a,
-        sorted: Array.from({ length: n }, (_, idx) => idx),
-        message: "基准分区及子区间递归排序全部完成，快速排序结束！"
+        sorted: [j],
+        message: `将基准 a[0] (${tempPivot}) 与 a[${j}] (${a[0]}) 交换，第一次基准分区全部完成！此时基准左侧 a[0..${j-1}] 均小于等于基准，右侧 a[${j+1}..${n-1}] 均大于等于基准，完美体现“左小右大”的分区特征。这里仅仅展示第一次分区的过程，后续分别在左边和右边递归进行。`
       });
 
       return timeline;
@@ -1871,6 +2203,7 @@
         case "bubble": return compileBubbleSort(arr);
         case "shell": return compileShellSort(arr);
         case "merge": return compileMergeSort(arr);
+        case "merge-bu": return compileMergeSortBU(arr);
         case "quick": return compileQuickSort(arr);
         case "heap": return compileHeapSort(arr);
         default: return compileSelectionSort(arr);
@@ -1911,6 +2244,8 @@
     const heapTreeBox = document.getElementById("heap-tree-box");
     const heapTreeContainer = document.getElementById("heap-tree-container");
     const heapSizeHint = document.getElementById("heap-size-hint");
+    const mergeTreeBox = document.getElementById("merge-tree-box");
+    const mergeTreeContainer = document.getElementById("merge-tree-container");
     const auxContainerBox = document.getElementById("aux-container-box");
     const auxDisplayContainer = document.getElementById("aux-display-container");
     const partitionContainerBox = document.getElementById("partition-container-box");
@@ -1979,6 +2314,13 @@
         heapSizeHint.classList.add("hidden");
       }
 
+      // Toggle Merge Tree Visualization
+      if (id === "merge-bu") {
+        mergeTreeBox.classList.remove("hidden");
+      } else {
+        mergeTreeBox.classList.add("hidden");
+      }
+
       pausePlayback();
       calculateTimeline();
     }
@@ -2030,6 +2372,9 @@
 
     function calculateTimeline() {
       activeTimeline = getAlgorithmTimeline(selectedAlgo.id, currentArray);
+      if (selectedAlgo.id === "merge-bu") {
+        activeTimeline.mergeTreeNodes = buildMergeTree(currentArray.length);
+      }
       playbackIndex = 0;
       updatePlaybackUI();
     }
@@ -2520,9 +2865,12 @@
       if (selectedAlgo.id === "heap") {
         renderHeapTree(step);
       }
+      if (selectedAlgo.id === "merge-bu") {
+        renderMergeTree(step);
+      }
 
       // Render Aux Container (Visible for merge sort)
-      if (selectedAlgo.id === "merge") {
+      if (selectedAlgo.id === "merge" || selectedAlgo.id === "merge-bu") {
         auxContainerBox.classList.remove("hidden");
         renderAuxBars(step);
       } else {
@@ -2726,6 +3074,9 @@
       window.addEventListener("resize", () => {
         if (selectedAlgo.id === "heap" && activeTimeline) {
           renderHeapTree(activeTimeline.steps[playbackIndex]);
+        }
+        if (selectedAlgo.id === "merge-bu" && activeTimeline) {
+          renderMergeTree(activeTimeline.steps[playbackIndex]);
         }
       });
     }
